@@ -184,7 +184,7 @@ class LearningAI
 	static const int maxWorkers = 10;
 	static const int maxWarriors =  15;
 	static const int maxBuildings = 5;
-	static const int maxResource = 10000000;
+	static const int maxResource = 10000;
 
 	int startLoc;
 

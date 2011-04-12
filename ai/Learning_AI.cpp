@@ -232,7 +232,7 @@ Actions::Actions(AiInterface * aiInterface , int startLoc , FILE * logs)
 
 bool Actions::selectAction(int actionNumber)
 {	
-	fprintf(logs, "Select action for %d", actionNumber);
+	fprintf(logs, "Select action for %d\n", actionNumber);
 	fflush(logs);
 	
 	switch(actionNumber)
@@ -458,11 +458,11 @@ bool Actions::harvest(int resourceNumber)
 
 	if(rt != NULL) 
 	{
-		fprintf(logs, "rt not null");
+		fprintf(logs, "rt not null\n");
 		const HarvestCommandType *hct= aiInterface->getMyUnit(unitIndex)->getType()->getFirstHarvestCommand(rt,aiInterface->getMyUnit(unitIndex)->getFaction());
 		if(hct != NULL)
 		{
-			fprintf(logs, "htc is not null");
+			fprintf(logs, "htc is not null\n");
 		}
 		Vec2i resPos;
 		if(hct != NULL && aiInterface->getNearestSightedResource(rt, aiInterface->getHomeLocation(), resPos, false)) 
@@ -498,7 +498,7 @@ bool Actions::repairDamagedUnit()
 						if(rct->isRepairableUnitType(u->getType()))
 						{
 	    						aiInterface->giveCommand(i, rct, u->getPos());
-								aiInterface->printLog(3, "Repairing order issued");	
+								//aiInterface->printLog(3, "Repairing order issued");	
 								flag = true;
 						}
 				}
@@ -870,13 +870,13 @@ void LearningAI::update()
 			getStateProbabilityDistribution(newSnapshot);
 			int newState ;
 			int newAct =semi_uniform_choose_action  (newState);
-			fprintf(logs, "after semi_uniform_choose_action");
+			fprintf(logs, "after semi_uniform_choose_action\n");
 			fflush(logs);
 			update_qvalues(lastState, newState,lastAct,reward);
-			fprintf(logs, "after update qvals");
+			fprintf(logs, "after update qvals\n");
 			fflush(logs);
 			lastActionSucceed  = action->selectAction(newAct);
-			fprintf(logs, "after selectAction");
+			fprintf(logs, "after selectAction\n");
 			fflush(logs);
 			lastState = newState;
 			lastAct = newAct;
@@ -936,7 +936,7 @@ void LearningAI:: getStateProbabilityDistribution(Snapshot *currSnapshot)
 	for(int i =0 ; i < NUM_OF_RESOURCES; i++)
 		resourceAmt+= currSnapshot-> resourcesAmount[i];
 
-	stateProbabs[stateGatherResource] = (currSnapshot-> noOfWorkers) * (maxResource/resourceAmt)  * featureWeights[featureRsourcesAmountWood];
+	stateProbabs[stateGatherResource] =(maxWorkers/(currSnapshot-> noOfWorkers +1) )* featureWeights[featureNoOfWorkers] + (maxResource/resourceAmt)  * featureWeights[featureRsourcesAmountWood];
 		
 	 //stateproduceUnit
 	float totalWeight = (maxWorkers/(currSnapshot-> noOfWorkers  +1))* featureWeights[featureNoOfWorkers]  + (maxWarriors/(currSnapshot-> noOfWarriors+1)) * featureWeights[featureNoOfWarriors]  +  (maxBuildings /(currSnapshot-> noOfBuildings +1) ) * featureWeights[featureNoOfBuildings] ; 
@@ -979,7 +979,7 @@ void LearningAI::getActionProbabilityDistribution(Snapshot *currSnapshot)
 void  LearningAI:: assignFeatureWeights()
 {
 	 //beingAttacked 
-	featureWeights[featureBeingAttacked ] =  100;
+	featureWeights[featureBeingAttacked ] =  500;
     //readyForAttack
 	featureWeights[featureReadyForAttack]  = 70 ;
 	//damagedUnitCount 
@@ -1130,11 +1130,11 @@ int LearningAI ::  semi_uniform_choose_action  (int & state)
 #define ARMY_BUILD_SLOW_PENALTY -40
 #define ATTACK_SLOW_PENALTY -20
 #define ARMY_BACKWARD_PENALTY -40
-#define REPAIR_DAMAGE_UNIT_REWARD 50
+#define REPAIR_DAMAGE_UNIT_REWARD 20
 #define EMERGENCY_WORKERS_REWARD  25
 #define MORE_WORKERS_REWARD  15
-#define MORE_WARRIORS_REWARD 20
-#define EMERGENCY_BUILDINGS_REWARD 20
+#define MORE_WARRIORS_REWARD 50
+#define EMERGENCY_BUILDINGS_REWARD 30
 #define MORE_BUILDINGS_REWARD 20
 #define MORE_UPGRADES_REWARD 25
 #define MORE_RESOURCE_REWARD 0.05f
@@ -1169,24 +1169,24 @@ float LearningAI :: getReward(Snapshot* preSnapshot, Snapshot* newSnapshot, bool
 	reward += ARMY_BACKWARD_PENALTY;
     }
 
-    reward += ( preSnapshot->damagedUnitCount - newSnapshot ->damagedUnitCount ) * REPAIR_DAMAGE_UNIT_REWARD;
+    reward += ( preSnapshot->damagedUnitCount / (newSnapshot ->damagedUnitCount +1 )) * REPAIR_DAMAGE_UNIT_REWARD;
 
     if( newSnapshot->noOfWorkers < MIN_WORKERS )
-	reward += ( newSnapshot->noOfWorkers - preSnapshot->noOfWorkers ) * EMERGENCY_WORKERS_REWARD;
+	reward += ( newSnapshot->noOfWorkers / (preSnapshot->noOfWorkers +1 )) * EMERGENCY_WORKERS_REWARD;
     else if( newSnapshot->noOfWorkers <  MAX_WORKERS ) 
-	reward += ( newSnapshot->noOfWorkers - preSnapshot->noOfWorkers ) * MORE_WORKERS_REWARD;
+	reward += ( newSnapshot->noOfWorkers / (preSnapshot->noOfWorkers +1) )* MORE_WORKERS_REWARD;
     else
-	reward += ( MAX_WORKERS - newSnapshot->noOfWorkers ) * MORE_WORKERS_REWARD;
+	reward += ( MAX_WORKERS / (newSnapshot->noOfWorkers +1 ) )* MORE_WORKERS_REWARD;
 
-    reward += ( newSnapshot->noOfWarriors - preSnapshot->noOfWarriors ) * MORE_WARRIORS_REWARD;
-    reward += ( newSnapshot->noOfKills - preSnapshot->noOfKills ) * KILL_REWARD;
+    reward += ( newSnapshot->noOfWarriors / (preSnapshot->noOfWarriors +1) ) * MORE_WARRIORS_REWARD;
+    reward += ( newSnapshot->noOfKills / (preSnapshot->noOfKills  +1)) * KILL_REWARD;
 
     if( newSnapshot->noOfBuildings < MIN_BUILDINGS )
-	reward += ( newSnapshot->noOfBuildings - preSnapshot->noOfBuildings ) * EMERGENCY_BUILDINGS_REWARD;
+	reward += ( newSnapshot->noOfBuildings /( preSnapshot->noOfBuildings +1 ) )* EMERGENCY_BUILDINGS_REWARD;
     else if( newSnapshot->noOfBuildings < MAX_BUILDINGS )
-	reward += ( newSnapshot->noOfBuildings - preSnapshot->noOfBuildings ) * MORE_BUILDINGS_REWARD;
+	reward += ( newSnapshot->noOfBuildings / (preSnapshot->noOfBuildings +1) )* MORE_BUILDINGS_REWARD;
     else
-	reward += ( MAX_BUILDINGS - newSnapshot->noOfBuildings ) * MORE_BUILDINGS_REWARD;
+	reward += ( MAX_BUILDINGS /(newSnapshot->noOfBuildings +1)) * MORE_BUILDINGS_REWARD;
 
     for( int i = 0; i < NUM_OF_RESOURCES; i++ ) {
 	if( newSnapshot->resourcesAmount[ i ] < MIN_RESOURCE ) 
@@ -1197,7 +1197,7 @@ float LearningAI :: getReward(Snapshot* preSnapshot, Snapshot* newSnapshot, bool
 	    reward += ( MAX_RESOURCE - preSnapshot->resourcesAmount[ i ] ) * MORE_RESOURCE_REWARD;
     }
 
-    reward += (float)( newSnapshot->upgradeCount - preSnapshot->upgradeCount ) * MORE_UPGRADES_REWARD;
+    reward += (float)( newSnapshot->upgradeCount /(preSnapshot->upgradeCount+1) ) * MORE_UPGRADES_REWARD;
     return reward;
 }
 
