@@ -1,0 +1,173 @@
+K 25
+svn:wc:ra_dav:version-url
+V 74
+/svnroot/megaglest/!svn/ver/1690/tags/release-3.4.0/source/glest_game/menu
+END
+menu_state_about.cpp
+K 25
+svn:wc:ra_dav:version-url
+V 95
+/svnroot/megaglest/!svn/ver/1690/tags/release-3.4.0/source/glest_game/menu/menu_state_about.cpp
+END
+menu_state_keysetup.h
+K 25
+svn:wc:ra_dav:version-url
+V 96
+/svnroot/megaglest/!svn/ver/1690/tags/release-3.4.0/source/glest_game/menu/menu_state_keysetup.h
+END
+menu_state_about.h
+K 25
+svn:wc:ra_dav:version-url
+V 93
+/svnroot/megaglest/!svn/ver/1690/tags/release-3.4.0/source/glest_game/menu/menu_state_about.h
+END
+menu_background.cpp
+K 25
+svn:wc:ra_dav:version-url
+V 94
+/svnroot/megaglest/!svn/ver/1690/tags/release-3.4.0/source/glest_game/menu/menu_background.cpp
+END
+menu_state_masterserver.cpp
+K 25
+svn:wc:ra_dav:version-url
+V 102
+/svnroot/megaglest/!svn/ver/1690/tags/release-3.4.0/source/glest_game/menu/menu_state_masterserver.cpp
+END
+menu_state_new_game.cpp
+K 25
+svn:wc:ra_dav:version-url
+V 98
+/svnroot/megaglest/!svn/ver/1690/tags/release-3.4.0/source/glest_game/menu/menu_state_new_game.cpp
+END
+menu_state_root.cpp
+K 25
+svn:wc:ra_dav:version-url
+V 94
+/svnroot/megaglest/!svn/ver/1690/tags/release-3.4.0/source/glest_game/menu/menu_state_root.cpp
+END
+menu_background.h
+K 25
+svn:wc:ra_dav:version-url
+V 92
+/svnroot/megaglest/!svn/ver/1690/tags/release-3.4.0/source/glest_game/menu/menu_background.h
+END
+main_menu.cpp
+K 25
+svn:wc:ra_dav:version-url
+V 88
+/svnroot/megaglest/!svn/ver/1690/tags/release-3.4.0/source/glest_game/menu/main_menu.cpp
+END
+menu_state_masterserver.h
+K 25
+svn:wc:ra_dav:version-url
+V 100
+/svnroot/megaglest/!svn/ver/1690/tags/release-3.4.0/source/glest_game/menu/menu_state_masterserver.h
+END
+menu_state_new_game.h
+K 25
+svn:wc:ra_dav:version-url
+V 96
+/svnroot/megaglest/!svn/ver/1690/tags/release-3.4.0/source/glest_game/menu/menu_state_new_game.h
+END
+menu_state_join_game.cpp
+K 25
+svn:wc:ra_dav:version-url
+V 99
+/svnroot/megaglest/!svn/ver/1690/tags/release-3.4.0/source/glest_game/menu/menu_state_join_game.cpp
+END
+menu_state_graphic_info.cpp
+K 25
+svn:wc:ra_dav:version-url
+V 102
+/svnroot/megaglest/!svn/ver/1690/tags/release-3.4.0/source/glest_game/menu/menu_state_graphic_info.cpp
+END
+menu_state_root.h
+K 25
+svn:wc:ra_dav:version-url
+V 92
+/svnroot/megaglest/!svn/ver/1690/tags/release-3.4.0/source/glest_game/menu/menu_state_root.h
+END
+main_menu.h
+K 25
+svn:wc:ra_dav:version-url
+V 86
+/svnroot/megaglest/!svn/ver/1690/tags/release-3.4.0/source/glest_game/menu/main_menu.h
+END
+server_line.cpp
+K 25
+svn:wc:ra_dav:version-url
+V 90
+/svnroot/megaglest/!svn/ver/1690/tags/release-3.4.0/source/glest_game/menu/server_line.cpp
+END
+menu_state_connected_game.cpp
+K 25
+svn:wc:ra_dav:version-url
+V 104
+/svnroot/megaglest/!svn/ver/1690/tags/release-3.4.0/source/glest_game/menu/menu_state_connected_game.cpp
+END
+menu_state_options.cpp
+K 25
+svn:wc:ra_dav:version-url
+V 97
+/svnroot/megaglest/!svn/ver/1690/tags/release-3.4.0/source/glest_game/menu/menu_state_options.cpp
+END
+menu_state_join_game.h
+K 25
+svn:wc:ra_dav:version-url
+V 97
+/svnroot/megaglest/!svn/ver/1690/tags/release-3.4.0/source/glest_game/menu/menu_state_join_game.h
+END
+menu_state_graphic_info.h
+K 25
+svn:wc:ra_dav:version-url
+V 100
+/svnroot/megaglest/!svn/ver/1690/tags/release-3.4.0/source/glest_game/menu/menu_state_graphic_info.h
+END
+server_line.h
+K 25
+svn:wc:ra_dav:version-url
+V 88
+/svnroot/megaglest/!svn/ver/1690/tags/release-3.4.0/source/glest_game/menu/server_line.h
+END
+menu_state_connected_game.h
+K 25
+svn:wc:ra_dav:version-url
+V 102
+/svnroot/megaglest/!svn/ver/1690/tags/release-3.4.0/source/glest_game/menu/menu_state_connected_game.h
+END
+menu_state_options.h
+K 25
+svn:wc:ra_dav:version-url
+V 95
+/svnroot/megaglest/!svn/ver/1690/tags/release-3.4.0/source/glest_game/menu/menu_state_options.h
+END
+menu_state_custom_game.cpp
+K 25
+svn:wc:ra_dav:version-url
+V 101
+/svnroot/megaglest/!svn/ver/1690/tags/release-3.4.0/source/glest_game/menu/menu_state_custom_game.cpp
+END
+menu_state_scenario.cpp
+K 25
+svn:wc:ra_dav:version-url
+V 98
+/svnroot/megaglest/!svn/ver/1690/tags/release-3.4.0/source/glest_game/menu/menu_state_scenario.cpp
+END
+menu_state_custom_game.h
+K 25
+svn:wc:ra_dav:version-url
+V 99
+/svnroot/megaglest/!svn/ver/1690/tags/release-3.4.0/source/glest_game/menu/menu_state_custom_game.h
+END
+menu_state_scenario.h
+K 25
+svn:wc:ra_dav:version-url
+V 96
+/svnroot/megaglest/!svn/ver/1690/tags/release-3.4.0/source/glest_game/menu/menu_state_scenario.h
+END
+menu_state_keysetup.cpp
+K 25
+svn:wc:ra_dav:version-url
+V 98
+/svnroot/megaglest/!svn/ver/1690/tags/release-3.4.0/source/glest_game/menu/menu_state_keysetup.cpp
+END

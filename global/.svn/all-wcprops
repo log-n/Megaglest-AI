@@ -1,0 +1,53 @@
+K 25
+svn:wc:ra_dav:version-url
+V 76
+/svnroot/megaglest/!svn/ver/1690/tags/release-3.4.0/source/glest_game/global
+END
+core_data.cpp
+K 25
+svn:wc:ra_dav:version-url
+V 90
+/svnroot/megaglest/!svn/ver/1690/tags/release-3.4.0/source/glest_game/global/core_data.cpp
+END
+lang.cpp
+K 25
+svn:wc:ra_dav:version-url
+V 85
+/svnroot/megaglest/!svn/ver/1690/tags/release-3.4.0/source/glest_game/global/lang.cpp
+END
+config.cpp
+K 25
+svn:wc:ra_dav:version-url
+V 87
+/svnroot/megaglest/!svn/ver/1690/tags/release-3.4.0/source/glest_game/global/config.cpp
+END
+core_data.h
+K 25
+svn:wc:ra_dav:version-url
+V 88
+/svnroot/megaglest/!svn/ver/1690/tags/release-3.4.0/source/glest_game/global/core_data.h
+END
+lang.h
+K 25
+svn:wc:ra_dav:version-url
+V 83
+/svnroot/megaglest/!svn/ver/1690/tags/release-3.4.0/source/glest_game/global/lang.h
+END
+metrics.cpp
+K 25
+svn:wc:ra_dav:version-url
+V 88
+/svnroot/megaglest/!svn/ver/1690/tags/release-3.4.0/source/glest_game/global/metrics.cpp
+END
+config.h
+K 25
+svn:wc:ra_dav:version-url
+V 85
+/svnroot/megaglest/!svn/ver/1690/tags/release-3.4.0/source/glest_game/global/config.h
+END
+metrics.h
+K 25
+svn:wc:ra_dav:version-url
+V 86
+/svnroot/megaglest/!svn/ver/1690/tags/release-3.4.0/source/glest_game/global/metrics.h
+END

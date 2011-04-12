@@ -1,0 +1,53 @@
+K 25
+svn:wc:ra_dav:version-url
+V 78
+/svnroot/megaglest/!svn/ver/1690/tags/release-3.4.0/source/glest_game/graphics
+END
+debug_renderer.h
+K 25
+svn:wc:ra_dav:version-url
+V 95
+/svnroot/megaglest/!svn/ver/1690/tags/release-3.4.0/source/glest_game/graphics/debug_renderer.h
+END
+unit_particle_type.cpp
+K 25
+svn:wc:ra_dav:version-url
+V 101
+/svnroot/megaglest/!svn/ver/1690/tags/release-3.4.0/source/glest_game/graphics/unit_particle_type.cpp
+END
+particle_type.cpp
+K 25
+svn:wc:ra_dav:version-url
+V 96
+/svnroot/megaglest/!svn/ver/1690/tags/release-3.4.0/source/glest_game/graphics/particle_type.cpp
+END
+renderer.cpp
+K 25
+svn:wc:ra_dav:version-url
+V 91
+/svnroot/megaglest/!svn/ver/1690/tags/release-3.4.0/source/glest_game/graphics/renderer.cpp
+END
+unit_particle_type.h
+K 25
+svn:wc:ra_dav:version-url
+V 99
+/svnroot/megaglest/!svn/ver/1690/tags/release-3.4.0/source/glest_game/graphics/unit_particle_type.h
+END
+particle_type.h
+K 25
+svn:wc:ra_dav:version-url
+V 94
+/svnroot/megaglest/!svn/ver/1690/tags/release-3.4.0/source/glest_game/graphics/particle_type.h
+END
+renderer.h
+K 25
+svn:wc:ra_dav:version-url
+V 89
+/svnroot/megaglest/!svn/ver/1690/tags/release-3.4.0/source/glest_game/graphics/renderer.h
+END
+debug_renderer.cpp
+K 25
+svn:wc:ra_dav:version-url
+V 97
+/svnroot/megaglest/!svn/ver/1690/tags/release-3.4.0/source/glest_game/graphics/debug_renderer.cpp
+END

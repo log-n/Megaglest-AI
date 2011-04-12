@@ -1,0 +1,29 @@
+K 25
+svn:wc:ra_dav:version-url
+V 75
+/svnroot/megaglest/!svn/ver/1690/tags/release-3.4.0/source/glest_game/sound
+END
+sound_renderer.cpp
+K 25
+svn:wc:ra_dav:version-url
+V 94
+/svnroot/megaglest/!svn/ver/1690/tags/release-3.4.0/source/glest_game/sound/sound_renderer.cpp
+END
+sound_container.h
+K 25
+svn:wc:ra_dav:version-url
+V 93
+/svnroot/megaglest/!svn/ver/1690/tags/release-3.4.0/source/glest_game/sound/sound_container.h
+END
+sound_renderer.h
+K 25
+svn:wc:ra_dav:version-url
+V 92
+/svnroot/megaglest/!svn/ver/1690/tags/release-3.4.0/source/glest_game/sound/sound_renderer.h
+END
+sound_container.cpp
+K 25
+svn:wc:ra_dav:version-url
+V 95
+/svnroot/megaglest/!svn/ver/1690/tags/release-3.4.0/source/glest_game/sound/sound_container.cpp
+END

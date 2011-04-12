@@ -1,0 +1,113 @@
+K 25
+svn:wc:ra_dav:version-url
+V 75
+/svnroot/megaglest/!svn/ver/1690/tags/release-3.4.0/source/glest_game/world
+END
+minimap.h
+K 25
+svn:wc:ra_dav:version-url
+V 85
+/svnroot/megaglest/!svn/ver/1690/tags/release-3.4.0/source/glest_game/world/minimap.h
+END
+unit_updater.cpp
+K 25
+svn:wc:ra_dav:version-url
+V 92
+/svnroot/megaglest/!svn/ver/1690/tags/release-3.4.0/source/glest_game/world/unit_updater.cpp
+END
+scenario.cpp
+K 25
+svn:wc:ra_dav:version-url
+V 88
+/svnroot/megaglest/!svn/ver/1690/tags/release-3.4.0/source/glest_game/world/scenario.cpp
+END
+unit_updater.h
+K 25
+svn:wc:ra_dav:version-url
+V 90
+/svnroot/megaglest/!svn/ver/1690/tags/release-3.4.0/source/glest_game/world/unit_updater.h
+END
+scenario.h
+K 25
+svn:wc:ra_dav:version-url
+V 86
+/svnroot/megaglest/!svn/ver/1690/tags/release-3.4.0/source/glest_game/world/scenario.h
+END
+tileset.cpp
+K 25
+svn:wc:ra_dav:version-url
+V 87
+/svnroot/megaglest/!svn/ver/1690/tags/release-3.4.0/source/glest_game/world/tileset.cpp
+END
+surface_atlas.cpp
+K 25
+svn:wc:ra_dav:version-url
+V 93
+/svnroot/megaglest/!svn/ver/1690/tags/release-3.4.0/source/glest_game/world/surface_atlas.cpp
+END
+map.cpp
+K 25
+svn:wc:ra_dav:version-url
+V 83
+/svnroot/megaglest/!svn/ver/1690/tags/release-3.4.0/source/glest_game/world/map.cpp
+END
+tileset.h
+K 25
+svn:wc:ra_dav:version-url
+V 85
+/svnroot/megaglest/!svn/ver/1690/tags/release-3.4.0/source/glest_game/world/tileset.h
+END
+water_effects.cpp
+K 25
+svn:wc:ra_dav:version-url
+V 93
+/svnroot/megaglest/!svn/ver/1690/tags/release-3.4.0/source/glest_game/world/water_effects.cpp
+END
+surface_atlas.h
+K 25
+svn:wc:ra_dav:version-url
+V 91
+/svnroot/megaglest/!svn/ver/1690/tags/release-3.4.0/source/glest_game/world/surface_atlas.h
+END
+map.h
+K 25
+svn:wc:ra_dav:version-url
+V 81
+/svnroot/megaglest/!svn/ver/1690/tags/release-3.4.0/source/glest_game/world/map.h
+END
+time_flow.cpp
+K 25
+svn:wc:ra_dav:version-url
+V 89
+/svnroot/megaglest/!svn/ver/1690/tags/release-3.4.0/source/glest_game/world/time_flow.cpp
+END
+water_effects.h
+K 25
+svn:wc:ra_dav:version-url
+V 91
+/svnroot/megaglest/!svn/ver/1690/tags/release-3.4.0/source/glest_game/world/water_effects.h
+END
+world.cpp
+K 25
+svn:wc:ra_dav:version-url
+V 85
+/svnroot/megaglest/!svn/ver/1690/tags/release-3.4.0/source/glest_game/world/world.cpp
+END
+time_flow.h
+K 25
+svn:wc:ra_dav:version-url
+V 87
+/svnroot/megaglest/!svn/ver/1690/tags/release-3.4.0/source/glest_game/world/time_flow.h
+END
+minimap.cpp
+K 25
+svn:wc:ra_dav:version-url
+V 87
+/svnroot/megaglest/!svn/ver/1690/tags/release-3.4.0/source/glest_game/world/minimap.cpp
+END
+world.h
+K 25
+svn:wc:ra_dav:version-url
+V 83
+/svnroot/megaglest/!svn/ver/1690/tags/release-3.4.0/source/glest_game/world/world.h
+END
