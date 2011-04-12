@@ -1,0 +1,65 @@
+K 25
+svn:wc:ra_dav:version-url
+V 74
+/svnroot/megaglest/!svn/ver/1690/tags/release-3.4.0/source/glest_game/main
+END
+intro.h
+K 25
+svn:wc:ra_dav:version-url
+V 82
+/svnroot/megaglest/!svn/ver/1690/tags/release-3.4.0/source/glest_game/main/intro.h
+END
+battle_end.cpp
+K 25
+svn:wc:ra_dav:version-url
+V 89
+/svnroot/megaglest/!svn/ver/1690/tags/release-3.4.0/source/glest_game/main/battle_end.cpp
+END
+macosx_main.h
+K 25
+svn:wc:ra_dav:version-url
+V 88
+/svnroot/megaglest/!svn/ver/1690/tags/release-3.4.0/source/glest_game/main/macosx_main.h
+END
+main.cpp
+K 25
+svn:wc:ra_dav:version-url
+V 83
+/svnroot/megaglest/!svn/ver/1690/tags/release-3.4.0/source/glest_game/main/main.cpp
+END
+battle_end.h
+K 25
+svn:wc:ra_dav:version-url
+V 87
+/svnroot/megaglest/!svn/ver/1690/tags/release-3.4.0/source/glest_game/main/battle_end.h
+END
+program.cpp
+K 25
+svn:wc:ra_dav:version-url
+V 86
+/svnroot/megaglest/!svn/ver/1690/tags/release-3.4.0/source/glest_game/main/program.cpp
+END
+macosx_main.m
+K 25
+svn:wc:ra_dav:version-url
+V 88
+/svnroot/megaglest/!svn/ver/1690/tags/release-3.4.0/source/glest_game/main/macosx_main.m
+END
+main.h
+K 25
+svn:wc:ra_dav:version-url
+V 81
+/svnroot/megaglest/!svn/ver/1690/tags/release-3.4.0/source/glest_game/main/main.h
+END
+intro.cpp
+K 25
+svn:wc:ra_dav:version-url
+V 84
+/svnroot/megaglest/!svn/ver/1690/tags/release-3.4.0/source/glest_game/main/intro.cpp
+END
+program.h
+K 25
+svn:wc:ra_dav:version-url
+V 84
+/svnroot/megaglest/!svn/ver/1690/tags/release-3.4.0/source/glest_game/main/program.h
+END

@@ -1,0 +1,125 @@
+K 25
+svn:wc:ra_dav:version-url
+V 75
+/svnroot/megaglest/!svn/ver/1690/tags/release-3.4.0/source/glest_game/types
+END
+element_type.h
+K 25
+svn:wc:ra_dav:version-url
+V 90
+/svnroot/megaglest/!svn/ver/1690/tags/release-3.4.0/source/glest_game/types/element_type.h
+END
+tech_tree.cpp
+K 25
+svn:wc:ra_dav:version-url
+V 89
+/svnroot/megaglest/!svn/ver/1690/tags/release-3.4.0/source/glest_game/types/tech_tree.cpp
+END
+tech_tree.h
+K 25
+svn:wc:ra_dav:version-url
+V 87
+/svnroot/megaglest/!svn/ver/1690/tags/release-3.4.0/source/glest_game/types/tech_tree.h
+END
+object_type.cpp
+K 25
+svn:wc:ra_dav:version-url
+V 91
+/svnroot/megaglest/!svn/ver/1690/tags/release-3.4.0/source/glest_game/types/object_type.cpp
+END
+object_type.h
+K 25
+svn:wc:ra_dav:version-url
+V 89
+/svnroot/megaglest/!svn/ver/1690/tags/release-3.4.0/source/glest_game/types/object_type.h
+END
+skill_type.cpp
+K 25
+svn:wc:ra_dav:version-url
+V 90
+/svnroot/megaglest/!svn/ver/1690/tags/release-3.4.0/source/glest_game/types/skill_type.cpp
+END
+command_type.cpp
+K 25
+svn:wc:ra_dav:version-url
+V 92
+/svnroot/megaglest/!svn/ver/1690/tags/release-3.4.0/source/glest_game/types/command_type.cpp
+END
+unit_type.cpp
+K 25
+svn:wc:ra_dav:version-url
+V 89
+/svnroot/megaglest/!svn/ver/1690/tags/release-3.4.0/source/glest_game/types/unit_type.cpp
+END
+skill_type.h
+K 25
+svn:wc:ra_dav:version-url
+V 88
+/svnroot/megaglest/!svn/ver/1690/tags/release-3.4.0/source/glest_game/types/skill_type.h
+END
+faction_type.cpp
+K 25
+svn:wc:ra_dav:version-url
+V 92
+/svnroot/megaglest/!svn/ver/1690/tags/release-3.4.0/source/glest_game/types/faction_type.cpp
+END
+damage_multiplier.cpp
+K 25
+svn:wc:ra_dav:version-url
+V 97
+/svnroot/megaglest/!svn/ver/1690/tags/release-3.4.0/source/glest_game/types/damage_multiplier.cpp
+END
+command_type.h
+K 25
+svn:wc:ra_dav:version-url
+V 90
+/svnroot/megaglest/!svn/ver/1690/tags/release-3.4.0/source/glest_game/types/command_type.h
+END
+unit_type.h
+K 25
+svn:wc:ra_dav:version-url
+V 87
+/svnroot/megaglest/!svn/ver/1690/tags/release-3.4.0/source/glest_game/types/unit_type.h
+END
+resource_type.cpp
+K 25
+svn:wc:ra_dav:version-url
+V 93
+/svnroot/megaglest/!svn/ver/1690/tags/release-3.4.0/source/glest_game/types/resource_type.cpp
+END
+upgrade_type.cpp
+K 25
+svn:wc:ra_dav:version-url
+V 92
+/svnroot/megaglest/!svn/ver/1690/tags/release-3.4.0/source/glest_game/types/upgrade_type.cpp
+END
+faction_type.h
+K 25
+svn:wc:ra_dav:version-url
+V 90
+/svnroot/megaglest/!svn/ver/1690/tags/release-3.4.0/source/glest_game/types/faction_type.h
+END
+damage_multiplier.h
+K 25
+svn:wc:ra_dav:version-url
+V 95
+/svnroot/megaglest/!svn/ver/1690/tags/release-3.4.0/source/glest_game/types/damage_multiplier.h
+END
+element_type.cpp
+K 25
+svn:wc:ra_dav:version-url
+V 92
+/svnroot/megaglest/!svn/ver/1690/tags/release-3.4.0/source/glest_game/types/element_type.cpp
+END
+resource_type.h
+K 25
+svn:wc:ra_dav:version-url
+V 91
+/svnroot/megaglest/!svn/ver/1690/tags/release-3.4.0/source/glest_game/types/resource_type.h
+END
+upgrade_type.h
+K 25
+svn:wc:ra_dav:version-url
+V 90
+/svnroot/megaglest/!svn/ver/1690/tags/release-3.4.0/source/glest_game/types/upgrade_type.h
+END
