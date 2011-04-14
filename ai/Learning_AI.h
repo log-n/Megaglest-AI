@@ -202,9 +202,10 @@ class LearningAI
 public:
 	~LearningAI()
 	{
-		free(lastSnapshot);
-		free(action);
-		fclose(logs);
+		//TODO why getting seg fault at all three following lines?
+		//free(lastSnapshot);
+		//free(action);
+		//fclose(logs);
 	}
 	void init(AiInterface *aiInterface,int useStartLocation=-1);
 	void update(); 

@@ -935,6 +935,10 @@ void LearningAI:: getStateProbabilityDistribution(Snapshot *currSnapshot)
 	int resourceAmt = 0 ;
 	for(int i =0 ; i < NUM_OF_RESOURCES; i++)
 		resourceAmt+= currSnapshot-> resourcesAmount[i];
+	//When all town centers are down, resources becomes zero ... to fix division by zero.
+	if(resourceAmt == 0){
+		resourceAmt = 1;
+	}
 
 	stateProbabs[stateGatherResource] =(maxWorkers/(currSnapshot-> noOfWorkers +1) )* featureWeights[featureNoOfWorkers] + (maxResource/resourceAmt)  * featureWeights[featureRsourcesAmountWood];
 		
