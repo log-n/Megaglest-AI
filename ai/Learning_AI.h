@@ -49,24 +49,23 @@ enum Resources
 
 enum NumberedActions
 {	
-    actHarvestGold,
-	actHarvestWood,
-	actHarvestStone,
-	actHarvestFood,
-	actHarvestEnergy,
-	actHarvestHousing,
-	actProduceWorker,
-	actProduceWarrior,    
-    actBuildDefensiveBuilding,
-    actBuildWarriorProducerBuilding,
-    actBuildResourceProducerBuilding,
-    actBuildFarm,
-    actRepairDamagedUnit,
-    actUpgrade,    
-	actSendScoutPatrol,
-    actAttack,
-	actDefend,
-
+    actHarvestGold, //0
+	actHarvestWood,//1
+	actHarvestStone,//2
+	actHarvestFood,//3
+	actHarvestEnergy,//4
+	actHarvestHousing,//5
+	actProduceWorker,//6
+	actProduceWarrior,    //7
+    actBuildDefensiveBuilding,//8
+    actBuildWarriorProducerBuilding,//9
+    actBuildResourceProducerBuilding,//10
+    actBuildFarm,//11
+    actRepairDamagedUnit,//12
+    actUpgrade,    //13
+	actSendScoutPatrol,//14
+    actAttack,//15
+	actDefend,//16
 };
 
 enum Features
@@ -102,7 +101,7 @@ class Snapshot
 {
 private:
     static const int baseRadius= 25;
-    static const int minWarriors = 5;
+    static const int minWarriors = 10;
 
 public:
 	FILE * logs;
@@ -202,10 +201,24 @@ class LearningAI
 public:
 	~LearningAI()
 	{
-		free(lastSnapshot);
-		free(action);
-		fclose(logs);
+		fprintf(logs, "In destructor \n ");
+		FILE *  fp = fopen("Q_values.txt" , "w");
+		for(int i = 0 ; i < NUM_OF_STATES ; i++)
+		{
+			for(int j = 0 ; j < NUM_OF_ACTIONS; j++)
+			{
+				fprintf(fp, "%f \n ", qValues[i][j]);
+				fprintf(logs, "%f \n ", qValues[i][j]);
+			}
+			
+		}
+		fclose(fp);
+		//TODO why getting seg fault at all three following lines?
+		//free(lastSnapshot);
+		//free(action);
+		//fclose(logs);
 	}
+	void printQvalues();
 	void init(AiInterface *aiInterface,int useStartLocation=-1);
 	void update(); 
 	Snapshot* takeSnapshot();

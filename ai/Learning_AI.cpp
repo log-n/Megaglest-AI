@@ -232,7 +232,7 @@ Actions::Actions(AiInterface * aiInterface , int startLoc , FILE * logs)
 
 bool Actions::selectAction(int actionNumber)
 {	
-	fprintf(logs, "Select action for %d\n", actionNumber);
+	fprintf(logs, "Selected action : %d\n", actionNumber);
 	fflush(logs);
 	
 	switch(actionNumber)
@@ -332,8 +332,7 @@ bool Actions::CheckAttackPosition(Vec2i &pos, Field &field, int radius)
 			field= unit->getCurrField();
             if(pos.dist(aiInterface->getHomeLocation())<radius)
 	    {
-                aiInterface->printLog(2, "Being attacked at pos "+intToStr(pos.x)+","+intToStr(pos.y)+"\n");
-			
+                aiInterface->printLog(2, "Being attacked at pos "+intToStr(pos.x)+","+intToStr(pos.y)+"\n");			
                 return true;
             }
         }
@@ -393,6 +392,7 @@ bool Actions::sendScoutPatrol()
 		SystemFlags::OutputDebug(SystemFlags::debugSystem,"In [%s::%s Line: %d]\n",__FILE__,__FUNCTION__,__LINE__);
 		aiInterface->giveCommand(unit, ccAttack, pos);
 		aiInterface->printLog(2, "Scout patrol sent to: " + intToStr(pos.x)+","+intToStr(pos.y)+"\n");
+		fprintf(logs, "Scout patrol sent to: %d , %d\n " ,pos.x, pos.y);
 		return true;
 }
 
@@ -416,11 +416,14 @@ bool Actions::massiveAttack(const Vec2i &pos, Field field)
 				aiInterface->giveCommand(i, act, pos);				
 				cnt ++;
 			}
+			if(alreadyAttacking)
+				cnt++;
 		}
 	}
 
 	SystemFlags::OutputDebug(SystemFlags::debugSystem,"In [%s::%s Line: %d]\n",__FILE__,__FUNCTION__,__LINE__);
 	aiInterface->printLog(2, "Massive attack to pos: "+ intToStr(pos.x)+", "+intToStr(pos.y)+"\n");
+	fprintf(logs	, "Massive attack to pos:  %d, %d \n",pos.x ,pos.y);
 	if(cnt == 0)
 		return false;
 	else
@@ -450,7 +453,10 @@ bool Actions::harvest(int resourceNumber)
 	int unitIndex ;	
 	bool flag = findAbleUnit(&unitIndex, ccHarvest, true);
 	if(flag == false)
+	{
+		fprintf(logs, "No free Unit \n");
 		 return false;
+	}
 	const Unit *unit = aiInterface->getMyUnit(unitIndex);
 	fprintf(logs, "UnitIndex for harvest %d\n", unitIndex);
 	fflush(logs);
@@ -499,6 +505,8 @@ bool Actions::repairDamagedUnit()
 						{
 	    						aiInterface->giveCommand(i, rct, u->getPos());
 								//aiInterface->printLog(3, "Repairing order issued");	
+								fprintf(logs, "Command sent to AI for repair \n");
+
 								flag = true;
 						}
 				}
@@ -531,6 +539,8 @@ bool Actions::produceOneUnit(UnitClass unitClass)
 					if(aiInterface->reqsOk(ct) && aiInterface->reqsOk(producedUnit))
 					{
 						aiInterface->giveCommand(i, ct);
+						fprintf(logs, "Command sent to AI for produce unit \n");
+
 						return true;
 					}
 				}
@@ -596,42 +606,58 @@ Vec2i Actions:: getRandomHomePosition()
 bool Actions::buildDefensiveBuilding()
 {
 	//for each unit
+	fprintf(logs, "In build Defensive Building...");
+	fflush(logs);
 	for(int i=0; i<aiInterface->getMyUnitCount(); ++i)
 	{
 		//for each command
 		const UnitType *ut= aiInterface->getMyUnit(i)->getType();
-		for(int j=0; j<ut->getCommandTypeCount(); ++j)
-		{
-			const CommandType *ct= ut->getCommandType(j);
-			//if the command is build
-			if(ct->getClass()==ccBuild)    
+		const Unit * unit = aiInterface->getMyUnit(i);
+		if(!unit->anyCommand() || unit->getCurrCommand()->getCommandType()->getClass()==ccStop)
+		{	
+			fprintf(logs, "unit %d is free for building...\n", i);
+			for(int j=0; j<ut->getCommandTypeCount(); ++j)
 			{
-				const BuildCommandType *bct= static_cast<const BuildCommandType*>(ct);
-
-				//for each building
-				for(int k=0; k<bct->getBuildingCount(); ++k)
+				const CommandType *ct= ut->getCommandType(j);
+				//if the command is build
+				if(ct->getClass()==ccBuild)    
 				{
-					const UnitType *building= bct->getBuilding(k);
-					if(aiInterface->reqsOk(bct) && aiInterface->reqsOk(building))
-					{
-						if(building->hasSkillClass(scAttack))
-						{
-							if(aiInterface->checkCosts(building) == false) 
-							{					    
-							        return false;
-							}
-							Vec2i pos;
-							Vec2i searchPos= getRandomHomePosition() +  aiInterface->getHomeLocation();
-			    			if(findPosForBuilding(building, searchPos, pos)) 
-							{
-							    aiInterface->giveCommand(i, bct, pos,building);
-								return true;
-							}
+					const BuildCommandType *bct= static_cast<const BuildCommandType*>(ct);
 
+					//for each building
+					for(int k=0; k<bct->getBuildingCount(); ++k)
+					{
+						const UnitType *building= bct->getBuilding(k);
+						if(aiInterface->reqsOk(bct) && aiInterface->reqsOk(building))
+						{
+							if(building->hasSkillClass(scAttack))
+							{
+								if(aiInterface->checkCosts(building) == false) 
+								{					    
+									fprintf(logs, "constly... to build..\n");
+										return false;
+								}
+								Vec2i pos;
+								Vec2i searchPos= getRandomHomePosition() +  aiInterface->getHomeLocation();
+			    				if(findPosForBuilding(building, searchPos, pos)) 
+								{
+									aiInterface->giveCommand(i, bct, pos,building);
+									fprintf(logs, "Command sent to AI for build defensive building \n");
+
+									return true;
+								}
+
+							}
 						}
 					}
 				}
 			}
+		}
+		else
+		{
+			fprintf(logs, "Unit %d already has a command...\n", i);
+			fflush(logs);
+			continue;
 		}
 	}
 	return false;
@@ -654,42 +680,61 @@ bool Actions::isWarriorProducer(const UnitType *building){
 bool  Actions::buildWarriorProducerBuilding()
 {
 	//for each unit
+		fprintf(logs, "In buildWarriorProducerBuilding...");
+		fflush(logs);
+
 	for(int i=0; i<aiInterface->getMyUnitCount(); ++i)
 	{
 		//for each command
 		const UnitType *ut= aiInterface->getMyUnit(i)->getType();
-		for(int j=0; j<ut->getCommandTypeCount(); ++j)
+		const Unit * unit = aiInterface->getMyUnit(i);
+		
+		if(!unit->anyCommand() || unit->getCurrCommand()->getCommandType()->getClass()==ccStop)
 		{
-			const CommandType *ct= ut->getCommandType(j);
-			//if the command is build
-			if(ct->getClass()==ccBuild)    
+		
+			fprintf(logs, "unit %d is free for command... \n", i);
+			for(int j=0; j<ut->getCommandTypeCount(); ++j)
 			{
-				const BuildCommandType *bct= static_cast<const BuildCommandType*>(ct);
-
-				//for each building
-				for(int k=0; k<bct->getBuildingCount(); ++k)
+				const CommandType *ct= ut->getCommandType(j);
+				//if the command is build
+				if(ct->getClass()==ccBuild)    
 				{
-					const UnitType *building= bct->getBuilding(k);
-					if(aiInterface->reqsOk(bct) && aiInterface->reqsOk(building))
-					{
-						if(isWarriorProducer(building))
-						{
-							if(aiInterface->checkCosts(building) == false) 
-							{					    
-							        return false;
-							}
-							Vec2i pos;
-							Vec2i searchPos= getRandomHomePosition() +  aiInterface->getHomeLocation();
-				    		if(findPosForBuilding(building, searchPos, pos)) 
-							{
-							    aiInterface->giveCommand(i, bct, pos,building);
-								return true;
-							}
+					const BuildCommandType *bct= static_cast<const BuildCommandType*>(ct);
 
+					//for each building
+					for(int k=0; k<bct->getBuildingCount(); ++k)
+					{
+						const UnitType *building= bct->getBuilding(k);
+						if(aiInterface->reqsOk(bct) && aiInterface->reqsOk(building))
+						{
+							if(isWarriorProducer(building))
+							{
+								if(aiInterface->checkCosts(building) == false) 
+								{					    
+									fprintf(logs, "costly... \n");
+										return false;
+								}
+								Vec2i pos;
+								Vec2i searchPos= getRandomHomePosition() +  aiInterface->getHomeLocation();
+				    			if(findPosForBuilding(building, searchPos, pos)) 
+								{
+									aiInterface->giveCommand(i, bct, pos,building);
+									fprintf(logs, "Command sent to AI for warrior producer building \n");
+
+									return true;
+								}
+
+							}
 						}
 					}
 				}
 			}
+		}
+		else
+		{
+			fprintf(logs, "Unit %d already has command... \n");
+			fflush(logs);
+			continue;	
 		}
 	}
 	return false;
@@ -710,40 +755,55 @@ bool Actions::buildResourceProducerBuilding()
 	//for each unit
 	for(int i=0; i<aiInterface->getMyUnitCount(); ++i)
 	{
-		//for each command
-		const UnitType *ut= aiInterface->getMyUnit(i)->getType();
-		for(int j=0; j<ut->getCommandTypeCount(); ++j)
-		{
-			const CommandType *ct= ut->getCommandType(j);
-			//if the command is build
-			if(ct->getClass()==ccBuild)    
+		const Unit * unit = aiInterface->getMyUnit(i);
+
+		if(!unit->anyCommand() || unit->getCurrCommand()->getCommandType()->getClass()==ccStop)
+		{			
+			fprintf(logs, "unit %d is free for command... \n", i);
+			//for each command
+			const UnitType *ut= aiInterface->getMyUnit(i)->getType();
+			for(int j=0; j<ut->getCommandTypeCount(); ++j)
 			{
-				const BuildCommandType *bct= static_cast<const BuildCommandType*>(ct);
-
-				//for each building
-				for(int k=0; k<bct->getBuildingCount(); ++k)
+				const CommandType *ct= ut->getCommandType(j);
+				//if the command is build
+				if(ct->getClass()==ccBuild)    
 				{
-					const UnitType *building= bct->getBuilding(k);
-					if(aiInterface->reqsOk(bct) && aiInterface->reqsOk(building))
-					{
-						if(isResourceProducer(building))
-						{
-							if(aiInterface->checkCosts(building) == false) 
-							{					    
-							        return false;
-							}
-							Vec2i pos;
-							Vec2i searchPos= getRandomHomePosition() +  aiInterface->getHomeLocation();
-				    			if(findPosForBuilding(building, searchPos, pos)) 
-							{
-							    aiInterface->giveCommand(i, bct, pos,building);
-								return true;
-							}
+					const BuildCommandType *bct= static_cast<const BuildCommandType*>(ct);
 
+					//for each building
+					for(int k=0; k<bct->getBuildingCount(); ++k)
+					{
+						const UnitType *building= bct->getBuilding(k);
+						if(aiInterface->reqsOk(bct) && aiInterface->reqsOk(building))
+						{
+							if(isResourceProducer(building))
+							{
+								if(aiInterface->checkCosts(building) == false) 
+								{					    
+									fprintf(logs, "costly...\n", i);
+										return false;
+								}
+								Vec2i pos;
+								Vec2i searchPos= getRandomHomePosition() +  aiInterface->getHomeLocation();
+				    				if(findPosForBuilding(building, searchPos, pos)) 
+								{
+									aiInterface->giveCommand(i, bct, pos,building);
+									fprintf(logs, "Command sent to AI for Resource producer building \n");
+
+									return true;
+								}
+
+							}
 						}
 					}
 				}
 			}
+		}
+		else
+		{
+			fprintf(logs, "Unit %d already has command... \n");
+			fflush(logs);
+			continue;	
 		}
 	}
 	return false;
@@ -758,7 +818,6 @@ bool Actions::buildFarm()
 	for(int i=0; i<aiInterface->getMyFactionType()->getUnitTypeCount(); ++i)
 	{
 		const UnitType *ut= aiInterface->getMyFactionType()->getUnitType(i);
-
 		//for all production commands
 		for(int j=0; j<ut->getCommandTypeCount(); ++j)
 		{
@@ -796,36 +855,50 @@ bool Actions::buildFarm()
 	{
 		//for each command
 		const UnitType *ut= aiInterface->getMyUnit(i)->getType();
-		for(int j=0; j<ut->getCommandTypeCount(); ++j)
+		const Unit * unit = aiInterface->getMyUnit(i);
+		if(!unit->anyCommand() || unit->getCurrCommand()->getCommandType()->getClass()==ccStop)
 		{
-			const CommandType *ct= ut->getCommandType(j);
-			//if the command is build
-			if(ct->getClass()==ccBuild)    
+			fprintf(logs, "unit %d is free for command... \n", i);
+			for(int j=0; j<ut->getCommandTypeCount(); ++j)
 			{
-			    const BuildCommandType *bct= static_cast<const BuildCommandType*>(ct);
-				//for each building
-				for(int k=0; k<bct->getBuildingCount(); ++k)
+				const CommandType *ct= ut->getCommandType(j);
+				//if the command is build
+				if(ct->getClass()==ccBuild)    
 				{
-					const UnitType *building= bct->getBuilding(k);
-					if(aiInterface->reqsOk(bct) && aiInterface->reqsOk(building))
+					const BuildCommandType *bct= static_cast<const BuildCommandType*>(ct);
+					//for each building
+					for(int k=0; k<bct->getBuildingCount(); ++k)
 					{
-						if(farm == building)
+						const UnitType *building= bct->getBuilding(k);
+						if(aiInterface->reqsOk(bct) && aiInterface->reqsOk(building))
 						{
-							if(aiInterface->checkCosts(building) == false) 
-							{					    
-							        return false;
-							}
-							Vec2i pos;
-							Vec2i searchPos= getRandomHomePosition() +  aiInterface->getHomeLocation();
-				    			if(findPosForBuilding(building, searchPos, pos)) 
+							if(farm == building)
 							{
-							    aiInterface->giveCommand(i, bct, pos,building);
-								return true;
+								if(aiInterface->checkCosts(building) == false) 
+								{					    
+									fprintf(logs, "costly..... \n", i);
+										return false;
+								}
+								Vec2i pos;
+								Vec2i searchPos= getRandomHomePosition() +  aiInterface->getHomeLocation();
+				    				if(findPosForBuilding(building, searchPos, pos)) 
+								{
+									aiInterface->giveCommand(i, bct, pos,building);
+									fprintf(logs, "Command sent to AI for build farm \n");
+
+									return true;
+								}
 							}
 						}
 					}
 				}
 			}
+		}
+		else
+		{
+			fprintf(logs, "Unit %d already has command... \n");
+			fflush(logs);
+			continue;	
 		}
 	}
 	return false;
@@ -835,7 +908,8 @@ void LearningAI::init(AiInterface *aiInterface, int useStartLocation)
 {
 	logs = fopen("learning_ai_log_file.txt", "w+");
 	this->aiInterface= aiInterface;
-	if(useStartLocation == -1) {
+	if(useStartLocation == -1) 
+	{
 		startLoc = random.randRange(0, aiInterface->getMapMaxPlayers()-1);
 	}
 	else 
@@ -851,15 +925,28 @@ void LearningAI::init(AiInterface *aiInterface, int useStartLocation)
 	lastActionSucceed = action->selectAction(lastAct);
 	//best_qvalue(int &state, int &best_action);
 
-	interval = 2000;
+	interval = 5000;
 	fprintf(logs," out of init...\n");
 	fflush(logs);
 }
 
+void LearningAI::printQvalues()
+{
+	for(int i = 0 ; i < NUM_OF_STATES; i++)	
+	{
+		for(int j = 0 ; j < NUM_OF_ACTIONS; j++)
+		{
+			fprintf(logs, "State %d Action %d : %f \n",i,j, qValues[i][j]);
+		}
+	}
+}
+
 void LearningAI::update()
 {
+		
 		if((aiInterface->getTimer() % (interval * GameConstants::updateFps / 1000)) == 0) 
 		{
+//		printQvalues();
 			aiInterface->printLog(4, " Inside update  :  " + intToStr(aiInterface->getTimer() )+"\n");
 			fprintf(logs," Inside update  %d \n", aiInterface->getTimer() );
 			fflush(logs);
@@ -915,7 +1002,7 @@ Snapshot* LearningAI :: takeSnapshot()
 
 void LearningAI:: getStateProbabilityDistribution(Snapshot *currSnapshot)
 {
-	fprintf(logs, "stateGatherResource  : %d \n",stateGatherResource);
+/*	fprintf(logs, "stateGatherResource  : %d \n",stateGatherResource);
 	fprintf(logs, "stateProduceUnit  : %d \n",stateProduceUnit);
 	fprintf(logs, "stateUpgrade  : %d \n",stateUpgrade);
 	fprintf(logs, "stateRepair  : %d \n",stateRepair);	
@@ -930,11 +1017,15 @@ void LearningAI:: getStateProbabilityDistribution(Snapshot *currSnapshot)
 	aiInterface->printLog(4, " State stateAttack  :  " + intToStr(stateAttack) +"\n" );
 	aiInterface->printLog(4, " State stateDefend  :  " + intToStr(stateDefend) +"\n" );
 
-
+*/
 	// state gatherResource
 	int resourceAmt = 0 ;
 	for(int i =0 ; i < NUM_OF_RESOURCES; i++)
 		resourceAmt+= currSnapshot-> resourcesAmount[i];
+	//When all town centers are down, resources becomes zero ... to fix division by zero.
+	if(resourceAmt == 0){
+		resourceAmt = 1;
+	}
 
 	stateProbabs[stateGatherResource] =(maxWorkers/(currSnapshot-> noOfWorkers +1) )* featureWeights[featureNoOfWorkers] + (maxResource/resourceAmt)  * featureWeights[featureRsourcesAmountWood];
 		
@@ -963,7 +1054,7 @@ void LearningAI::normalizeProbabilities(double values[] , int length)
 		double sum = 0 ;
 		for(int i =0 ; i < length ; i++)
 		{
-			fprintf(logs, " %d : %f" , i , values[i]);
+			fprintf(logs, " %d : %f\n" , i , values[i]);
 			sum +=values[i];
 		}
 		fflush(logs);
@@ -1009,9 +1100,29 @@ void  LearningAI:: assignFeatureWeights()
 
 void LearningAI ::  init_qvalues()
 {
-  int s,a;
+		FILE *  fp = fopen("Q_values.txt" , "r");
+		fprintf(logs, "Q values read from file..\n");
+		if(fp != NULL)
+		{
+			rewind (fp);
+			for(int i = 0 ; i < NUM_OF_STATES ; i++)
+			{
+				for(int j = 0 ; j < NUM_OF_ACTIONS; j++)
+				{
+					float value;
+					//fscanf(fp, "%f\n", &qValues[i][j]);
+					fscanf(fp, "%f", &value);	
+					qValues[i][j] = value;
+					fprintf(logs, "Q value for state %d Action %d : %f \n", i,j,qValues[i][j]);
+					fflush(logs);
+				}				
+			}
+			fclose(fp);
+			return;
+		}
+	 int s,a;
   
-  for (s=0;s< NUM_OF_STATES;s++)
+	for (s=0;s< NUM_OF_STATES;s++)
 		for (a=0;a< NUM_OF_ACTIONS ;a++)
 			qValues[s][a] = -1 * INT_MAX;;
 
@@ -1045,7 +1156,7 @@ void LearningAI ::  init_qvalues()
 
 	//stateDefend
 	qValues[stateDefend][actDefend]= 1;
-  // For actions that r not supported in a state we need to give -INT_MAX q value so that those r never chosen..
+  // For actions that r not supported in a state we need to give -INT_MAX q value so that those r never chosen..	
 }
 
 double LearningAI :: best_qvalue(int &state, int &best_action)
@@ -1067,8 +1178,11 @@ double LearningAI :: best_qvalue(int &state, int &best_action)
 			}
 	  }
   }
-  fprintf(logs, "\nIn best Value !!! state %d Action %d", state , best_action);
+
+  fprintf(logs, "\nIn best Value !!! state %d Action %d\n", state , best_action);
+
   fflush(logs);
+
   return (qValues[state][best_act]);
 }
 
@@ -1077,11 +1191,11 @@ void  LearningAI :: update_qvalues(int olds,int news,int action,double reward)
 	double best_qval, qval;
 	int newAct;
 	best_qval = best_qvalue(news,newAct);
-
-	qval = qValues[olds][action];
+	fprintf(logs, "Previous Q value: State %d Action %d : %f \n",olds, action, qValues[olds][action] );
+	qval = qValues[olds][action];	
+	qValues[olds][action] =   (1 - BETA)*qval + BETA*(reward  + GAMMA*best_qval);      
 	
-	qValues[olds][action] = 
-	  (1 - BETA)*qval + BETA*(reward  + GAMMA*best_qval);      
+	fprintf(logs, "Updated Q value : State %d Action %d : %f \n",olds, action, qValues[olds][action] );
 }
 
 int LearningAI ::  semi_uniform_choose_action  (int & state)
@@ -1123,7 +1237,6 @@ int LearningAI ::  semi_uniform_choose_action  (int & state)
 	  return (act);
 } 
 
-
 #define DEFEND_SUCCESS_REWARD 200
 #define KILL_REWARD 100
 #define ARMY_READY_REWARD 100
@@ -1145,41 +1258,57 @@ int LearningAI ::  semi_uniform_choose_action  (int & state)
 #define MAX_BUILDINGS 30
 #define MIN_RESOURCE 1000
 #define MAX_RESOURCE 10000
-#define ACTION_FAILED_PENALTY -200
+#define ACTION_FAILED_PENALTY -50
 
 float LearningAI :: getReward(Snapshot* preSnapshot, Snapshot* newSnapshot, bool actionSucceed)
 {
     float reward = 0;
     if( actionSucceed == false )
-	reward += ACTION_FAILED_PENALTY;    
-    if( preSnapshot ->beingAttacked && !newSnapshot ->beingAttacked ) {
-	reward += DEFEND_SUCCESS_REWARD;
+	{
+		reward += ACTION_FAILED_PENALTY;    
+		fprintf(logs, "Action failed!! %d \n", lastAct);
+	}
+    if( preSnapshot ->beingAttacked && !newSnapshot ->beingAttacked ) 
+	{		
+		reward += DEFEND_SUCCESS_REWARD;
+		fprintf(logs, "Reward  after DEFEND_SUCCESS_REWARD : %f \n", reward);
     }
     else if( !preSnapshot ->beingAttacked && newSnapshot ->beingAttacked && newSnapshot ->readyForAttack ) {
 	reward += ATTACK_SLOW_PENALTY;
+	fprintf(logs, "Reward  after  ATTACK_SLOW_PENALTY: %f \n", reward);
     }
-    else if( !preSnapshot ->beingAttacked && newSnapshot ->beingAttacked && !newSnapshot ->readyForAttack ) {
-	reward += ARMY_BUILD_SLOW_PENALTY;
+    else if( !preSnapshot ->beingAttacked && newSnapshot ->beingAttacked && !newSnapshot ->readyForAttack ) 
+	{
+		reward += ARMY_BUILD_SLOW_PENALTY;
+		fprintf(logs, "Reward  after  ARMY_BUILD_SLOW_PENALTY : %f \n", reward);
     }
 
-    if( !preSnapshot ->readyForAttack && newSnapshot ->readyForAttack ) {
-	reward += ARMY_READY_REWARD;
+    if( !preSnapshot ->readyForAttack && newSnapshot ->readyForAttack ) 
+	{
+		reward += ARMY_READY_REWARD;
+		fprintf(logs, "Reward  after  ARMY_READY_REWARD : %f \n", reward);
     }
-    else if( preSnapshot ->readyForAttack && !newSnapshot ->readyForAttack ) {
-	reward += ARMY_BACKWARD_PENALTY;
+    else if( preSnapshot ->readyForAttack && !newSnapshot ->readyForAttack ) 
+	{
+		reward += ARMY_BACKWARD_PENALTY;
+		fprintf(logs, "ARMY_BACKWARD_PENALTY: %f\n ", reward);
     }
 
     reward += ( preSnapshot->damagedUnitCount / (newSnapshot ->damagedUnitCount +1 )) * REPAIR_DAMAGE_UNIT_REWARD;
+		fprintf(logs, "Reward by damanged unit count : %f \n", reward);
 
-    if( newSnapshot->noOfWorkers < MIN_WORKERS )
+    if( newSnapshot->noOfWorkers < MIN_WORKERS )	
 	reward += ( newSnapshot->noOfWorkers / (preSnapshot->noOfWorkers +1 )) * EMERGENCY_WORKERS_REWARD;
     else if( newSnapshot->noOfWorkers <  MAX_WORKERS ) 
 	reward += ( newSnapshot->noOfWorkers / (preSnapshot->noOfWorkers +1) )* MORE_WORKERS_REWARD;
     else
 	reward += ( MAX_WORKERS / (newSnapshot->noOfWorkers +1 ) )* MORE_WORKERS_REWARD;
 
+	fprintf(logs, "Reward by worker  unit count : %f \n", reward);
     reward += ( newSnapshot->noOfWarriors / (preSnapshot->noOfWarriors +1) ) * MORE_WARRIORS_REWARD;
+	fprintf(logs, "Reward by warrior unit count : %f \n", reward);
     reward += ( newSnapshot->noOfKills / (preSnapshot->noOfKills  +1)) * KILL_REWARD;
+	fprintf(logs, "Reward by no of Kills count : %f \n", reward);
 
     if( newSnapshot->noOfBuildings < MIN_BUILDINGS )
 	reward += ( newSnapshot->noOfBuildings /( preSnapshot->noOfBuildings +1 ) )* EMERGENCY_BUILDINGS_REWARD;
@@ -1187,22 +1316,27 @@ float LearningAI :: getReward(Snapshot* preSnapshot, Snapshot* newSnapshot, bool
 	reward += ( newSnapshot->noOfBuildings / (preSnapshot->noOfBuildings +1) )* MORE_BUILDINGS_REWARD;
     else
 	reward += ( MAX_BUILDINGS /(newSnapshot->noOfBuildings +1)) * MORE_BUILDINGS_REWARD;
+	fprintf(logs, "Reward by no  of buildings count : %f \n", reward);
 
-    for( int i = 0; i < NUM_OF_RESOURCES; i++ ) {
-	if( newSnapshot->resourcesAmount[ i ] < MIN_RESOURCE ) 
-	    reward += ( newSnapshot->resourcesAmount[ i ] - preSnapshot->resourcesAmount[ i ] ) * EMERGENCY_RESOURCE_REWARD;
-	else if( newSnapshot->resourcesAmount[ i ] < MAX_RESOURCE )
-	    reward += ( newSnapshot->resourcesAmount[ i ] - preSnapshot->resourcesAmount[ i ] ) * MORE_RESOURCE_REWARD;
-	else
-	    reward += ( MAX_RESOURCE - preSnapshot->resourcesAmount[ i ] ) * MORE_RESOURCE_REWARD;
+    for( int i = 0; i < NUM_OF_RESOURCES; i++ ) 
+	{
+		if(newSnapshot->resourcesAmount[ i ]  > preSnapshot->resourcesAmount[ i ])
+		{
+			if( newSnapshot->resourcesAmount[ i ] < MIN_RESOURCE ) 		
+				reward += ( newSnapshot->resourcesAmount[ i ] - preSnapshot->resourcesAmount[ i ] ) * EMERGENCY_RESOURCE_REWARD;
+			else if( newSnapshot->resourcesAmount[ i ] < MAX_RESOURCE )
+				reward += ( newSnapshot->resourcesAmount[ i ] - preSnapshot->resourcesAmount[ i ] ) * MORE_RESOURCE_REWARD;
+			else
+				reward += ( MAX_RESOURCE - preSnapshot->resourcesAmount[ i ] ) * MORE_RESOURCE_REWARD;
+		}
+	fprintf(logs, "Reward by no  of resources count : %f \n", reward);
     }
 
     reward += (float)( newSnapshot->upgradeCount /(preSnapshot->upgradeCount+1) ) * MORE_UPGRADES_REWARD;
+	fprintf(logs, "Reward by upgrade count : %f \n", reward);
+	fprintf(logs,"REWARD is %f \n", reward);
     return reward;
 }
-
-
-
 }}//end namespace
 
 
