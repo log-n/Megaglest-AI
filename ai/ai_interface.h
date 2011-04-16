@@ -57,6 +57,7 @@ public:
 
 	//main
     void update();
+    void battleEnd();
 	
 	//get
 	int getTimer() const		{return timer;}

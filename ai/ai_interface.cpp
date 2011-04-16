@@ -75,11 +75,19 @@ AiInterface::~AiInterface() {
 void AiInterface::update() {
 	timer++;
 	
-	if(getControlType() == ctLearningAI)
+	if(getControlType() == ctLearningAI){
 		learningAi.update();
-	else
+	}
+	else{
 		ai.update();
+	}
 	
+}
+
+void AiInterface::battleEnd(){
+	if(getControlType() == ctLearningAI){
+		learningAi.battleEnd();
+	}
 }
 
 // ==================== misc ====================

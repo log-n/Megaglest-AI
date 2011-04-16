@@ -1098,7 +1098,9 @@ void  LearningAI:: assignFeatureWeights()
 	featureWeights[featureRsourcesAmountHousing]  = 10 ;
 }
 
-LearningAI :: ~LearningAI()
+LearningAI :: ~LearningAI(){}
+
+void LearningAI :: battleEnd()
 {
 	FILE *  fp = fopen("Q_values.txt" , "w");
 	for(int i = 0 ; i < NUM_OF_STATES ; i++)

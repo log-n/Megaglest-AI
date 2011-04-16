@@ -1817,12 +1817,29 @@ void Game::render2d(){
 // ==================== misc ====================
 
 void Game::checkWinner() {
-	if(gameOver == false) {
+	if(gameOver == false)
+	{
 		if(gameSettings.getDefaultVictoryConditions()) {
 			checkWinnerStandard();
 		}
 		else {
 			checkWinnerScripted();
+		}
+
+		if(gameOver == true)
+		{
+			NetworkManager &networkManager= NetworkManager::getInstance();
+			bool enableServerControlledAI 	= this->gameSettings.getEnableServerControlledAI();
+			bool isNetworkGame 				= this->gameSettings.isNetworkGame();
+			NetworkRole role 				= networkManager.getNetworkRole();
+
+			for(int j = 0; j < world.getFactionCount(); ++j) {
+				Faction *faction = world.getFaction(j);
+				if(	faction->getCpuControl(enableServerControlledAI,isNetworkGame,role) == true &&
+						scriptManager.getPlayerModifiers(j)->getAiEnabled() == true) {
+					aiInterfaces[j]->battleEnd();
+				}
+			}
 		}
 	}
 }

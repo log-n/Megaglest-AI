@@ -203,6 +203,7 @@ public:
 	void printQvalues();
 	void init(AiInterface *aiInterface,int useStartLocation=-1);
 	void update(); 
+	void battleEnd();
 	Snapshot* takeSnapshot();
 	void init_qvalues();
 	double best_qvalue(int &state, int &best_action);	
