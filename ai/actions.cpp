@@ -31,8 +31,12 @@ bool Actions::selectAction(int actionNumber)
 				{
 					Vec2i  pos;
 					Field field;
-					CheckAttackPosition(pos, field, INT_MAX);
-					return  massiveAttack(pos, field);
+					if(CheckAttackPosition(pos, field, INT_MAX)){
+						return  massiveAttack(pos, field);
+					}
+					else{
+						return false;
+					}
 					break;
 				}
 
@@ -40,8 +44,12 @@ bool Actions::selectAction(int actionNumber)
 				{
 					Vec2i  pos;
 					Field field;
-					CheckAttackPosition(pos, field, villageRadius + 10);
-					return massiveAttack(pos, field);
+					if(CheckAttackPosition(pos, field, villageRadius + 10)){
+						return massiveAttack(pos, field);
+					}
+					else{
+						return false;
+					}
 					break;
 				}
 
@@ -595,12 +603,8 @@ bool Actions::buildResourceProducerBuilding()
 	return false;
 }
 
-
-
-bool Actions::buildFarm()
+const UnitType* Actions::getFarm()
 {
-    const UnitType *farm;// = NULL;
-	//for all units
 	for(int i=0; i<aiInterface->getMyFactionType()->getUnitTypeCount(); ++i)
 	{
 		const UnitType *ut= aiInterface->getMyFactionType()->getUnitType(i);
@@ -620,16 +624,20 @@ bool Actions::buildFarm()
 					//find a food producer in the farm produced units
 					if(r->getAmount()<0 && r->getType()->getClass()==rcConsumable)
 					{
-						farm = ut;
-					}
-					else
-					{
-						farm = NULL;
+						return ut;
 					}
 				}
 			}
 		}
 	}
+
+	return NULL;
+}
+
+bool Actions::buildFarm()
+{
+    const UnitType *farm = getFarm();
+	//for all units
 
 	if(farm == NULL)
 	{

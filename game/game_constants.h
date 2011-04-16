@@ -55,7 +55,7 @@ enum ControlType {
 	ctNetwork,
 	ctHuman,
 	ctLearningAI,		//Sharad
-
+	ctAIsha,
 	ctNetworkCpuEasy,
 	ctNetworkCpu,
 	ctNetworkCpuUltra,

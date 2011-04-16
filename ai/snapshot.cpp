@@ -29,9 +29,21 @@ Snapshot::Snapshot(AiInterface * aiInterface , FILE * logs)
     resourcesType[ 5 ] = "housing";*/
     upgradeCount = 0;
     noOfKills = 0;
+
+	Field field ;
+	Vec2i  pos;
+	getUpgradeCount();
+	CheckIfBeingAttacked(pos, field);
+	CheckIfStableBase();
+	countDamagedUnits( );
+	getKills();
+	noOfWorkers = getCountOfClass(ucWorker);
+	noOfWarriors = getCountOfClass(ucWarrior);
+	noOfBuildings = getCountOfClass(ucBuilding);
+	getResourceStatus();
+
 	fprintf(logs, "out of Snapshot constructor\n");
 	fflush(logs);
-	aiInterface->printLog(4, "out of Snapshot constructor at line \n" );//+intToStr( __LINE__ )+ " in file " + intToStr(__FILE__));
 }
 
 Snapshot &Snapshot::operator =( const Snapshot &s ) {

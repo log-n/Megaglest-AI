@@ -21,6 +21,7 @@
 #include "command.h"
 #include "randomgen.h"
 #include "leak_dumper.h"
+#include "unit_type.h"
 
 namespace Glest{ namespace Game{
 
@@ -32,10 +33,6 @@ class AiInterface;
 #define NUM_OF_RESOURCES 6
 #define NUM_OF_ACTIONS 17
 #define NUM_OF_STATES 6
-#define EXPLORATION_THRESHOLD 0.25
-
-#define BETA 0.1
-#define  GAMMA 0.7
 
 enum Resources
 {
@@ -122,6 +119,8 @@ public:
     */
 	Snapshot(AiInterface * aiInterface, FILE * logs);
     Snapshot &operator = ( const Snapshot &s );
+
+private:
     int getKills();
 	int getUpgradeCount();
 	bool CheckIfBeingAttacked(Vec2i &pos, Field &field);
@@ -154,6 +153,7 @@ private:
 	bool isResourceProducer(const UnitType *building);
 	bool findPosForBuilding(const UnitType* building, const Vec2i &searchPos, Vec2i &outPos);
 	bool CheckAttackPosition(Vec2i &pos, Field &field, int radius);
+	const UnitType* getFarm();
 
 public:
 
@@ -179,6 +179,7 @@ class LearningAI
 {
 	AiInterface *aiInterface;
 	FILE * logs;
+	bool probSelect;
 
 	static const int maxWorkers = 10;
 	static const int maxWarriors =  15;
@@ -186,6 +187,7 @@ class LearningAI
 	static const int maxResource = 10000;
 
 	int startLoc;
+	int GameNumber;
 
 	Snapshot * lastSnapshot;
 	bool lastActionSucceed;
@@ -214,6 +216,12 @@ public:
 	void getActionProbabilityDistribution(Snapshot *currSnapshot);
 	void normalizeProbabilities(double values[] , int length);
 	float getReward(Snapshot* preSnapshot, Snapshot* newSnapshot, bool actionSucceed);
+
+private:
+	void updateLoop();
+	double probable_qvalue(int &best_action);
+	int choose_probable_action  ();
+	void  update_probable_qvalues(int action, double reward);
 };
 }}
 

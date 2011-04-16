@@ -117,12 +117,12 @@ int Faction::getStoreAmount(const ResourceType *rt) const{
 bool Faction::getCpuControl(bool enableServerControlledAI,bool isNetworkGame, NetworkRole role) const {
 	bool result = false;
 	if(enableServerControlledAI == false || isNetworkGame == false) {
-		result = (control == ctCpuEasy ||control == ctCpu || control == ctCpuUltra || control == ctCpuMega || control == ctLearningAI);
+		result = (control == ctCpuEasy ||control == ctCpu || control == ctCpuUltra || control == ctCpuMega || control == ctLearningAI || control == ctAIsha);
 	}
 	else {
 		if(isNetworkGame == true) {
 			if(role == nrServer) {
-				result = (control == ctCpuEasy ||control == ctCpu || control == ctCpuUltra || control == ctCpuMega || control == ctLearningAI);
+				result = (control == ctCpuEasy ||control == ctCpu || control == ctCpuUltra || control == ctCpuMega || control == ctLearningAI || control == ctAIsha);
 			}
 			else {
 				result = (control == ctNetworkCpuEasy ||control == ctNetworkCpu || control == ctNetworkCpuUltra || control == ctNetworkCpuMega);
@@ -135,7 +135,7 @@ bool Faction::getCpuControl(bool enableServerControlledAI,bool isNetworkGame, Ne
 
 bool Faction::getCpuControl() const {
 	return 	control == ctCpuEasy 		||control == ctCpu 			|| control == ctCpuUltra 		|| control == ctCpuMega || control == ctLearningAI ||
-			control == ctNetworkCpuEasy ||control == ctNetworkCpu 	|| control == ctNetworkCpuUltra || control == ctNetworkCpuMega;
+			control == ctNetworkCpuEasy ||control == ctNetworkCpu 	|| control == ctNetworkCpuUltra || control == ctNetworkCpuMega || control == ctAIsha;
 }
 
 // ==================== upgrade manager ====================

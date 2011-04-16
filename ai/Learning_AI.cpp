@@ -4,11 +4,21 @@
 #include "unit_type.h"
 #include "unit.h"
 #include "leak_dumper.h"
+#include <time.h>
+#include <cassert>
+
+
+#define EXPLORATION_THRESHOLD 0.1
+
+#define BETA 0.04
+#define  GAMMA 0.05
 
 namespace Glest { namespace Game {
 
 void LearningAI::init(AiInterface *aiInterface, int useStartLocation) 
 {
+	random.init(time(NULL));
+	probSelect = true;
 	logs = fopen("learning_ai_log_file.txt", "w+");
 	this->aiInterface= aiInterface;
 	if(useStartLocation == -1) 
@@ -24,7 +34,16 @@ void LearningAI::init(AiInterface *aiInterface, int useStartLocation)
 	init_qvalues();
 	lastSnapshot = takeSnapshot();
 	getStateProbabilityDistribution(lastSnapshot);
-	lastAct =semi_uniform_choose_action  (lastState);
+
+	if(probSelect)
+	{
+		lastAct = choose_probable_action();
+	}
+	else
+	{
+		lastAct =semi_uniform_choose_action  (lastState);
+	}
+
 	lastActionSucceed = action->selectAction(lastAct);
 	//best_qvalue(int &state, int &best_action);
 
@@ -47,7 +66,7 @@ void LearningAI::printQvalues()
 void LearningAI::update()
 {
 		
-		if((aiInterface->getTimer() % (interval * GameConstants::updateFps / 1000)) == 0) 
+		//if((aiInterface->getTimer() % (interval * GameConstants::updateFps / 1000)) == 0)
 		{
 //		printQvalues();
 			aiInterface->printLog(4, " Inside update  :  " + intToStr(aiInterface->getTimer() )+"\n");
@@ -58,17 +77,32 @@ void LearningAI::update()
 			free(lastSnapshot);
 			lastSnapshot = newSnapshot;
 			getStateProbabilityDistribution(newSnapshot);
-			int newState ;
-			int newAct =semi_uniform_choose_action  (newState);
-			fprintf(logs, "after semi_uniform_choose_action\n");
-			fflush(logs);
-			update_qvalues(lastState, newState,lastAct,reward);
-			fprintf(logs, "after update qvals\n");
-			fflush(logs);
+
+			int newAct;
+
+			if(probSelect)
+			{
+				newAct = choose_probable_action();
+				if(lastActionSucceed){
+					update_probable_qvalues(lastAct, reward);
+				}
+			}
+			else
+			{
+				int newState ;
+				newAct =semi_uniform_choose_action  (newState);
+				fprintf(logs, "after semi_uniform_choose_action\n");
+				fflush(logs);
+				update_qvalues(lastState, newState,lastAct,reward);
+				fprintf(logs, "after update qvals\n");
+				fflush(logs);
+				lastState = newState;
+			}
+
 			lastActionSucceed  = action->selectAction(newAct);
 			fprintf(logs, "after selectAction\n");
 			fflush(logs);
-			lastState = newState;
+
 			lastAct = newAct;
 			aiInterface->printLog(4, " state :  " + intToStr( lastState )+ " Action : " + intToStr( lastAct )+"\n");
 			fprintf(logs," state  :  %d action : %d \n",  lastState, lastAct);
@@ -79,28 +113,9 @@ void LearningAI::update()
 
 Snapshot* LearningAI :: takeSnapshot()
 {
-	//try
-	{
-		Field field ;
-		Vec2i  pos;
-		Snapshot *s = new  Snapshot(aiInterface , logs);
-		s->getUpgradeCount();
-		s->CheckIfBeingAttacked(pos, field);
-		s->CheckIfStableBase();
-		s->countDamagedUnits( );
-		s->getKills();
-		s->noOfWorkers = s->getCountOfClass(ucWorker);
-		s->noOfWarriors = s->getCountOfClass(ucWarrior);
-		s->noOfBuildings = s->getCountOfClass(ucBuilding);
-		s->getResourceStatus();
-		aiInterface->printLog(4, "Out of take snapshot \n");
-		return s;
-	}
-/*	catch
-	{
-			fprintf(logs, "Exception in update function ");
-			
-	}*/
+	Snapshot *s = new  Snapshot(aiInterface , logs);
+	aiInterface->printLog(4, "Out of take snapshot \n");
+	return s;
 }
 
 void LearningAI:: getStateProbabilityDistribution(Snapshot *currSnapshot)
@@ -161,8 +176,19 @@ void LearningAI::normalizeProbabilities(double values[] , int length)
 			sum +=values[i];
 		}
 		fflush(logs);
-		for(int i =0 ; i < length ; i++)
-			values[i] = values[i]/sum;
+
+		if(sum != 0)
+		{
+			for(int i =0 ; i < length ; i++)
+				values[i] = values[i]/sum;
+		}
+		else
+		{
+			for(int i =0 ; i < length ; i++){
+				values[i] = 0;
+			}
+			values[random.randRange(0, length-1)] = 1;
+		}
 }
 
 void LearningAI::getActionProbabilityDistribution(Snapshot *currSnapshot)
@@ -206,6 +232,7 @@ LearningAI :: ~LearningAI(){}
 void LearningAI :: battleEnd()
 {
 	FILE *  fp = fopen("Q_values.txt" , "w");
+	fprintf(fp, "%d\n", GameNumber);
 	for(int i = 0 ; i < NUM_OF_STATES ; i++)
 	{
 		for(int j = 0 ; j < NUM_OF_ACTIONS; j++)
@@ -223,6 +250,8 @@ void LearningAI ::  init_qvalues()
 		if(fp != NULL)
 		{
 			rewind (fp);
+			fscanf(fp, "%d", &GameNumber);
+			GameNumber++;
 			for(int i = 0 ; i < NUM_OF_STATES ; i++)
 			{
 				for(int j = 0 ; j < NUM_OF_ACTIONS; j++)
@@ -238,11 +267,20 @@ void LearningAI ::  init_qvalues()
 			fclose(fp);
 			return;
 		}
+
 	 int s,a;
+	 GameNumber = 1;
   
 	for (s=0;s< NUM_OF_STATES;s++)
 		for (a=0;a< NUM_OF_ACTIONS ;a++)
-			qValues[s][a] = -1 * INT_MAX;;
+		{
+			if(probSelect){
+				qValues[s][a] = -1;
+			}
+			else{
+				qValues[s][a] = -1 * INT_MAX;;
+			}
+		}
 
   // Assign reward 1 to actions supported by each state
   //stateGatherResource
@@ -304,6 +342,49 @@ double LearningAI :: best_qvalue(int &state, int &best_action)
   return (qValues[state][best_act]);
 }
 
+double LearningAI:: probable_qvalue(int &best_action)
+{
+	double actQvals [NUM_OF_ACTIONS];
+	for(int a=0; a< NUM_OF_ACTIONS; a++)
+	{
+		double sum = 0;
+		for(int s = 0 ; s < NUM_OF_STATES; s++)
+		{
+			sum+= stateProbabs[s]*qValues[s][a];
+		}
+		if(sum < 0){
+			sum = 0;
+		}
+		actQvals[a] = sum;
+	}
+
+	normalizeProbabilities(actQvals, NUM_OF_ACTIONS);
+
+  float zero = 0.0, one = 1.0;
+  float selection = random.randRange(zero, one);
+
+  double prob_start = 0; int index = 0, ret_act = -1;
+  double prob_end = actQvals[index];
+
+  while(true)
+  {
+	  if(prob_start <= selection  && prob_end >= selection)
+	  {
+		 best_action = index;
+		 return ret_act;
+	  }
+	  index++;
+	  if(index == NUM_OF_ACTIONS)
+	  {
+		  assert(false);
+	  }
+	  prob_start = prob_end;
+	  prob_end += actQvals[index];
+  }
+
+
+}
+
 void  LearningAI :: update_qvalues(int olds,int news,int action,double reward)
 {
 	double best_qval, qval;
@@ -326,6 +407,7 @@ int LearningAI ::  semi_uniform_choose_action  (int & state)
 	  float range_end = 1.0; 
 	  best_val=best_qvalue(state, act);
 	  rand_value = random.randRange(range_start,  range_end);
+	  printf("%d\t%d\t%f\n", state, act, rand_value);
 	  if (rand_value > (1.0 - EXPLORATION_THRESHOLD))
 	  {			
 			switch(state)
@@ -355,12 +437,51 @@ int LearningAI ::  semi_uniform_choose_action  (int & state)
 	  return (act);
 } 
 
+void  LearningAI :: update_probable_qvalues(int action, double reward)
+{
+	/*double best_qval = -1E+10, qval;
+
+	for(int s =0; s< NUM_OF_STATES; s++)
+	{
+		if(qValues[s][action]*stateProbabs[s] > best_qval)
+		{
+			best_qval = qValues[s][action]*stateProbabs[s];
+		}
+	}*/
+
+	for(int s =0; s< NUM_OF_STATES; s++)
+	{
+		double qval = qValues[s][action];
+		qValues[s][action] =   (1 - BETA)*qval + BETA*(reward*stateProbabs[s]);
+	}
+
+}
+
+int LearningAI ::  choose_probable_action  ()
+{
+	  double best_val = -1E+10;
+	  int act;
+
+	  float rand_value;
+	  float range_start = 0.0;
+	  float range_end = 1.0;
+	  best_val=probable_qvalue(act);
+	  rand_value = random.randRange(range_start,  range_end);
+	  if (rand_value > (1.0 - EXPLORATION_THRESHOLD))
+	  {
+			act = random.randRange(0, NUM_OF_ACTIONS-1);
+			fprintf(logs, " random action : %d ",  act);
+			fflush(logs);
+	  }
+	  return (act);
+}
+
 #define DEFEND_SUCCESS_REWARD 200
 #define KILL_REWARD 100
 #define ARMY_READY_REWARD 100
-#define ARMY_BUILD_SLOW_PENALTY -40
+#define ARMY_BUILD_SLOW_PENALTY -30
 #define ATTACK_SLOW_PENALTY -20
-#define ARMY_BACKWARD_PENALTY -40
+#define ARMY_BACKWARD_PENALTY -10
 #define REPAIR_DAMAGE_UNIT_REWARD 20
 #define EMERGENCY_WORKERS_REWARD  25
 #define MORE_WORKERS_REWARD  15
@@ -376,7 +497,7 @@ int LearningAI ::  semi_uniform_choose_action  (int & state)
 #define MAX_BUILDINGS 30
 #define MIN_RESOURCE 1000
 #define MAX_RESOURCE 10000
-#define ACTION_FAILED_PENALTY -50
+#define ACTION_FAILED_PENALTY 0
 
 float LearningAI :: getReward(Snapshot* preSnapshot, Snapshot* newSnapshot, bool actionSucceed)
 {
@@ -455,6 +576,12 @@ float LearningAI :: getReward(Snapshot* preSnapshot, Snapshot* newSnapshot, bool
 	fprintf(logs,"REWARD is %f \n", reward);
     return reward;
 }
+
+void LearningAI:: updateLoop()
+{
+
+}
+
 }}//end namespace
 
 

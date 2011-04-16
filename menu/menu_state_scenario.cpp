@@ -377,6 +377,10 @@ ControlType MenuStateScenario::strToControllerType(const string &str){
 	{
 		return ctLearningAI;
 	}
+	else if(str=="AIsha")
+	{
+		return ctAIsha;
+	}
 
 	char szBuf[4096]="";
 	sprintf(szBuf,"Invalid controller value specified in scenario: [%s] must be one of the following: closed, cpu-easy, cpu, cpu-ultra, cpu-mega, human",str.c_str());

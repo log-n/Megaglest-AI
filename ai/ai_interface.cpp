@@ -44,11 +44,15 @@ AiInterface::AiInterface(Game &game, int factionIndex, int teamIndex, int useSta
 	timer= 0;
 
 	//init ai
-	if(getControlType() == ctLearningAI)
+	if(getControlType() == ctLearningAI){
 		learningAi.init(this,useStartLocation);
-	else 
+	}
+	else if(getControlType() == ctAIsha){
+		aisha.init(this, useStartLocation);
+	}
+	else{
 		ai.init(this,useStartLocation);
-	
+	}
 
 	//config
 	logLevel= Config::getInstance().getInt("AiLog");
@@ -78,6 +82,9 @@ void AiInterface::update() {
 	if(getControlType() == ctLearningAI){
 		learningAi.update();
 	}
+	else if(getControlType() == ctAIsha){
+		aisha.update();
+	}
 	else{
 		ai.update();
 	}
@@ -87,6 +94,9 @@ void AiInterface::update() {
 void AiInterface::battleEnd(){
 	if(getControlType() == ctLearningAI){
 		learningAi.battleEnd();
+	}
+	else if(getControlType() == ctAIsha){
+		aisha.battleEnd();
 	}
 }
 

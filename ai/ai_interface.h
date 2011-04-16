@@ -21,6 +21,7 @@
 #include "game_settings.h"
 #include <map>
 #include "leak_dumper.h"
+#include "aisha.h"
 
 using Shared::Util::intToStr;
 
@@ -41,6 +42,7 @@ private:
 
     Ai ai;
 	LearningAI learningAi;
+	AIsha aisha;
 
     int timer;
     int factionIndex;

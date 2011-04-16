@@ -433,6 +433,7 @@ MenuStateCustomGame::MenuStateCustomGame(Program *program, MainMenu *mainMenu, b
 	controlItems.push_back(lang.get("Network"));
 	controlItems.push_back(lang.get("Human"));
 	controlItems.push_back(lang.get("Learning AI"));
+	controlItems.push_back(lang.get("AIsha"));
 
 	for(int i=0; i<45; ++i){
 		rMultiplier.push_back(floatToStr(0.5f+0.1f*i,1));
@@ -897,7 +898,7 @@ void MenuStateCustomGame::mouseClick(int x, int y, MouseButton mouseButton){
         			if(factionFiles[listBoxFactions[i].getSelectedItemIndex()] == formatString(GameConstants::OBSERVER_SLOTNAME) &&
         				(listBoxControls[i].getSelectedItemIndex() == ctCpuEasy || listBoxControls[i].getSelectedItemIndex() == ctCpu ||
         				 listBoxControls[i].getSelectedItemIndex() == ctCpuUltra || listBoxControls[i].getSelectedItemIndex() == ctCpuMega ||
-						 listBoxControls[i].getSelectedItemIndex() == ctLearningAI)) {
+						 listBoxControls[i].getSelectedItemIndex() == ctLearningAI || listBoxControls[i].getSelectedItemIndex() == ctAIsha)) {
         				listBoxFactions[i].setSelectedItemIndex(0);
         			}
         			//
@@ -974,7 +975,7 @@ void MenuStateCustomGame::updateResourceMultiplier(const int index) {
 			listBoxRMultiplier[index].setSelectedItemIndex((GameConstants::normalMultiplier-0.5f)*10);
 			listBoxRMultiplier[index].setEnabled(true);
 		}
-		else if(ct == ctCpuUltra || ct == ctNetworkCpuUltra || ct == ctLearningAI)
+		else if(ct == ctCpuUltra || ct == ctNetworkCpuUltra || ct == ctLearningAI || ct == ctAIsha)
 		{
 			listBoxRMultiplier[index].setSelectedItemIndex((GameConstants::ultraMultiplier-0.5f)*10);
 			listBoxRMultiplier[index].setEnabled(true);

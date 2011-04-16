@@ -122,6 +122,9 @@ void BattleEnd::render(){
 			case ctLearningAI:
 				controlString= "Learning AI";
 				break;
+			case ctAIsha:
+				controlString= "AIsha";
+				break;
 
 			case ctNetworkCpuEasy:
 				controlString= lang.get("NetworkCpuEasy");
