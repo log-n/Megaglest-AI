@@ -732,7 +732,7 @@ bool  Actions::buildWarriorProducerBuilding()
 		}
 		else
 		{
-			fprintf(logs, "Unit %d already has command... \n");
+			fprintf(logs, "Unit already has command... \n");
 			fflush(logs);
 			continue;	
 		}
@@ -801,7 +801,7 @@ bool Actions::buildResourceProducerBuilding()
 		}
 		else
 		{
-			fprintf(logs, "Unit %d already has command... \n");
+			fprintf(logs, "Unit already has command... \n");
 			fflush(logs);
 			continue;	
 		}
@@ -896,7 +896,7 @@ bool Actions::buildFarm()
 		}
 		else
 		{
-			fprintf(logs, "Unit %d already has command... \n");
+			fprintf(logs, "Unit already has command... \n");
 			fflush(logs);
 			continue;	
 		}
@@ -1098,6 +1098,19 @@ void  LearningAI:: assignFeatureWeights()
 	featureWeights[featureRsourcesAmountHousing]  = 10 ;
 }
 
+LearningAI :: ~LearningAI()
+{
+	FILE *  fp = fopen("Q_values.txt" , "w");
+	for(int i = 0 ; i < NUM_OF_STATES ; i++)
+	{
+		for(int j = 0 ; j < NUM_OF_ACTIONS; j++)
+		{
+			fprintf(fp, "%lf\n ", qValues[i][j]);
+		}
+	}
+	fclose(fp);
+}
+
 void LearningAI ::  init_qvalues()
 {
 		FILE *  fp = fopen("Q_values.txt" , "r");
@@ -1109,11 +1122,11 @@ void LearningAI ::  init_qvalues()
 			{
 				for(int j = 0 ; j < NUM_OF_ACTIONS; j++)
 				{
-					float value;
+					double value;
 					//fscanf(fp, "%f\n", &qValues[i][j]);
-					fscanf(fp, "%f", &value);	
+					fscanf(fp, "%lf", &value);
 					qValues[i][j] = value;
-					fprintf(logs, "Q value for state %d Action %d : %f \n", i,j,qValues[i][j]);
+					fprintf(logs, "Q value for state %d Action %d : %lf \n", i,j,qValues[i][j]);
 					fflush(logs);
 				}				
 			}

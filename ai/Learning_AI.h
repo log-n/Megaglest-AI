@@ -199,21 +199,7 @@ class LearningAI
 	Actions  *action;
 	int interval;
 public:
-	~LearningAI()
-	{
-		fprintf(logs, "In destructor \n ");
-		FILE *  fp = fopen("Q_values.txt" , "w");
-		for(int i = 0 ; i < NUM_OF_STATES ; i++)
-		{
-			for(int j = 0 ; j < NUM_OF_ACTIONS; j++)
-			{
-				fprintf(fp, "%f \n ", qValues[i][j]);
-				fprintf(logs, "%f \n ", qValues[i][j]);
-			}
-			
-		}
-		fclose(fp);
-	}
+	~LearningAI();
 	void printQvalues();
 	void init(AiInterface *aiInterface,int useStartLocation=-1);
 	void update(); 
