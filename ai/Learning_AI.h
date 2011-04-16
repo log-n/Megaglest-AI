@@ -213,10 +213,6 @@ public:
 			
 		}
 		fclose(fp);
-		//TODO why getting seg fault at all three following lines?
-		//free(lastSnapshot);
-		//free(action);
-		//fclose(logs);
 	}
 	void printQvalues();
 	void init(AiInterface *aiInterface,int useStartLocation=-1);

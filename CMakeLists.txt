@@ -85,6 +85,7 @@ ENDIF()
 
 SET(DIRS_WITH_SRC
     	ai
+    automation
 	facilities
 	game
 	global

@@ -3,13 +3,13 @@
 //
 //	Copyright (C) 2001-2008 Marti�o Figueroa
 //
-//	You can redistribute this code and/or modify it under 
-//	the terms of the GNU General Public License as published 
-//	by the Free Software Foundation; either version 2 of the 
+//	You can redistribute this code and/or modify it under
+//	the terms of the GNU General Public License as published
+//	by the Free Software Foundation; either version 2 of the
 //	License, or (at your option) any later version
 // ==============================================================
 
-#include "battle_end.h"	
+#include "automation.h"
 
 #include "main_menu.h"
 #include "program.h"
@@ -23,6 +23,8 @@
 #include "metrics.h"
 #include "stats.h"
 #include "auto_test.h"
+#include "game.h"
+#include "logger.h"
 
 #include "leak_dumper.h"
 
@@ -31,17 +33,16 @@ using namespace Shared::Util;
 namespace Glest{ namespace Game{
 
 // =====================================================
-// 	class BattleEnd  
+// 	class BattleEnd
 // =====================================================
 
-BattleEnd::BattleEnd(Program *program, const Stats *stats): ProgramState(program) {
-	SystemFlags::OutputDebug(SystemFlags::debugSystem,"In [%s::%s %d] stats = %p\n",__FILE__,__FUNCTION__,__LINE__,stats);
-	if(stats != NULL) {
-		this->stats= *stats;
-	}
-	mouseX = 0;
-	mouseY = 0;
-	mouse2d = 0;
+Automation::Automation(Program *program, GameSettings *gameSettings, const int numOfGames):
+		ProgramState(program)
+{
+	count = 0;
+	this->gameSettings = *gameSettings;
+	this->numOfGames = numOfGames;
+	this->program = program;
 
 	const Metrics &metrics= Metrics::getInstance();
 	Lang &lang= Lang::getInstance();
@@ -49,28 +50,52 @@ BattleEnd::BattleEnd(Program *program, const Stats *stats): ProgramState(program
 	int xLocation = (metrics.getVirtualW() / 2) - (buttonWidth / 2);
 	buttonExit.init(xLocation, 80, buttonWidth);
 	buttonExit.setText(lang.get("Exit"));
-
-	//mesage box
-	mainMessageBox.init(lang.get("Yes"), lang.get("No"));
-	mainMessageBox.setEnabled(false);
-
-	SystemFlags::OutputDebug(SystemFlags::debugSystem,"In [%s::%s %d]\n",__FILE__,__FUNCTION__,__LINE__);
 }
 
-BattleEnd::~BattleEnd() {
-	SystemFlags::OutputDebug(SystemFlags::debugSystem,"In [%s::%s %d]\n",__FILE__,__FUNCTION__,__LINE__);
-	SoundRenderer::getInstance().playMusic(CoreData::getInstance().getMenuMusic());
-	SystemFlags::OutputDebug(SystemFlags::debugSystem,"In [%s::%s %d]\n",__FILE__,__FUNCTION__,__LINE__);
+bool Automation::isFinished()
+{
+	return count >= numOfGames;
 }
 
-void BattleEnd::update() {
-	if(Config::getInstance().getBool("AutoTest")){
-		AutoTest::getInstance().updateBattleEnd(program);
+Automation::~Automation() {
+}
+
+void Automation::update()
+{
+	if(!isFinished()){
+		Game *game = new Game(program, &gameSettings, true);
+
+		int X = 0;
+		int Y = 0;
+		SDL_GetMouseState(&X,&Y);
+		game->setStartXY(X,Y);
+		Logger::getInstance().setProgress(0);
+		Logger::getInstance().setState("");
+
+
+		SDL_PumpEvents();
+
+		showCursor(true);
+		SDL_PumpEvents();
+		sleep(0);
+
+
+		game->load();
+		game->init();
+
+		this->render();
+
+		this->stats = *(game->runFast());
+		count++;
+		delete game;
 	}
-	mouse2d= (mouse2d+1) % Renderer::maxMouse2dAnim;
 }
 
-void BattleEnd::render(){
+void Automation::render(){
+	if(count == 0){
+		return;
+	}
+
 	Renderer &renderer= Renderer::getInstance();
 	TextRenderer2D *textRenderer= renderer.getTextRenderer();
 	Lang &lang= Lang::getInstance();
@@ -78,8 +103,9 @@ void BattleEnd::render(){
 	renderer.clearBuffers();
 	renderer.reset2d();
 	renderer.renderBackground(CoreData::getInstance().getBackgroundTexture());
-	
+
 	textRenderer->begin(CoreData::getInstance().getMenuFontNormal());
+	textRenderer->render((intToStr(count) + " out of " + intToStr(numOfGames) + " Games.").c_str(), 100, 70);
 
 	int lm= 20;
 	int bm= 100;
@@ -119,6 +145,9 @@ void BattleEnd::render(){
 			case ctHuman:
 				controlString= lang.get("Human");
 				break;
+			case ctLearningAI:
+				controlString= "Learning AI";
+				break;
 
 			case ctNetworkCpuEasy:
 				controlString= lang.get("NetworkCpuEasy");
@@ -137,7 +166,7 @@ void BattleEnd::render(){
 				assert(false);
 			};
 		}
-		
+
 		if(stats.getControl(i)!=ctHuman && stats.getControl(i)!=ctNetwork ){
 			controlString+=" x "+floatToStr(stats.getResourceMultiplier(i),1);
 		}
@@ -194,85 +223,24 @@ void BattleEnd::render(){
 
 	textRenderer->end();
 
-	renderer.renderButton(&buttonExit);
-
-	//exit message box
-	if(mainMessageBox.getEnabled()){
-		renderer.renderMessageBox(&mainMessageBox);
+	if(isFinished()){
+		renderer.renderButton(&buttonExit);
 	}
-
-	renderer.renderMouse2d(mouseX, mouseY, mouse2d, 0.f);
 
 	renderer.swapBuffers();
 }
 
-void BattleEnd::keyDown(char key){
-	SystemFlags::OutputDebug(SystemFlags::debugSystem,"In [%s::%s %d]\n",__FILE__,__FUNCTION__,__LINE__);
-	if(key == vkEscape) {
-		//program->setState(new MainMenu(program));
+void Automation::mouseMove(int x, int y, const MouseState *ms){
 
-		if(mainMessageBox.getEnabled()) {
-			mainMessageBox.setEnabled(false);
-		}
-		else {
-			Lang &lang= Lang::getInstance();
-			showMessageBox(lang.get("ExitGame?"), "", true);
-		}
+	if(isFinished()){
+		buttonExit.mouseMove(x, y);
 	}
-	else if(key == vkReturn && mainMessageBox.getEnabled()) {
-		SystemFlags::OutputDebug(SystemFlags::debugSystem,"In [%s::%s Line: %d]\n",__FILE__,__FUNCTION__,__LINE__);
+}
+
+void Automation::mouseDownLeft(int x, int y){
+
+	if(isFinished() && buttonExit.mouseClick(x,y)) {
 		program->setState(new MainMenu(program));
-	}
-}
-
-void BattleEnd::mouseDownLeft(int x, int y){
-	SystemFlags::OutputDebug(SystemFlags::debugSystem,"In [%s::%s %d]\n",__FILE__,__FUNCTION__,__LINE__);
-	//program->setState(new MainMenu(program));
-
-	if(buttonExit.mouseClick(x,y)) {
-		SystemFlags::OutputDebug(SystemFlags::debugSystem,"In [%s::%s %d]\n",__FILE__,__FUNCTION__,__LINE__);
-		program->setState(new MainMenu(program));
-	}
-	else if(mainMessageBox.getEnabled()) {
-		int button= 1;
-		if(mainMessageBox.mouseClick(x, y, button)) {
-			if(button==1) {
-				SystemFlags::OutputDebug(SystemFlags::debugSystem,"In [%s::%s Line: %d]\n",__FILE__,__FUNCTION__,__LINE__);
-				program->setState(new MainMenu(program));
-			}
-			else {
-				SystemFlags::OutputDebug(SystemFlags::debugSystem,"In [%s::%s Line: %d]\n",__FILE__,__FUNCTION__,__LINE__);
-				//close message box
-				mainMessageBox.setEnabled(false);
-			}
-		}
-	}
-
-}
-
-void BattleEnd::mouseMove(int x, int y, const MouseState *ms){
-	mouseX = x;
-	mouseY = y;
-
-	buttonExit.mouseMove(x, y);
-	if (mainMessageBox.getEnabled()) {
-		mainMessageBox.mouseMove(x, y);
-	}
-
-}
-
-void BattleEnd::showMessageBox(const string &text, const string &header, bool toggle) {
-	if(toggle == false) {
-		mainMessageBox.setEnabled(false);
-	}
-
-	if(mainMessageBox.getEnabled() == false) {
-		mainMessageBox.setText(text);
-		mainMessageBox.setHeader(header);
-		mainMessageBox.setEnabled(true);
-	}
-	else {
-		mainMessageBox.setEnabled(false);
 	}
 }
 

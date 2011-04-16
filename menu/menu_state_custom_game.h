@@ -30,12 +30,14 @@ class MenuStateCustomGame : public MenuState, public SimpleTaskCallbackInterface
 private:
 	GraphicButton buttonReturn;
 	GraphicButton buttonPlayNow;
+	GraphicButton buttonAutomate;
 	GraphicButton buttonRestoreLastSettings;
 	GraphicLabel labelControl;
 	GraphicLabel labelRMultiplier;
 	GraphicLabel labelFaction;
 	GraphicLabel labelTeam;
 	GraphicLabel labelMap;
+	GraphicLabel labelCount;
 	GraphicLabel labelFogOfWar;
 	GraphicLabel labelTechTree;
 	GraphicLabel labelTileset;
@@ -50,6 +52,7 @@ private:
 	GraphicListBox listBoxTechTree;
 	GraphicListBox listBoxTileset;
 	GraphicListBox listBoxEnableObserverMode;
+	GraphicListBox listBoxCount;
 	//GraphicListBox listBoxEnableServerControlledAI;
 
 	vector<string> mapFiles;
@@ -190,6 +193,7 @@ private:
 
 	void RestoreLastGameSettings();
 	void PlayNow();
+	void Automate();
 
 	void SetActivePlayerNameEditor();
 	void cleanup();

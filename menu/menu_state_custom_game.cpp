@@ -29,6 +29,7 @@
 #include <curl/curl.h>
 #include "cache_manager.h"
 #include "leak_dumper.h"
+#include "automation.h"
 
 
 namespace Glest{ namespace Game{
@@ -125,6 +126,22 @@ MenuStateCustomGame::MenuStateCustomGame(Program *program, MainMenu *mainMenu, b
 
 	buttonPlayNow.registerGraphicComponent(containerName,"buttonPlayNow");
 	buttonPlayNow.init(250+130+205, 180, 125);
+
+	int automateX=300; int automateY =130;
+	labelCount.registerGraphicComponent(containerName,"labelCount");
+	labelCount.init(automateX, automateY);
+	labelCount.setText("Num of Games:");
+
+	listBoxCount.registerGraphicComponent(containerName,"listBoxCount");
+	listBoxCount.init(automateX, automateY-30, 100);
+	for(int i=1; i<32767; i = i*2){
+		listBoxCount.pushBackItem(intToStr(i));
+	}
+	listBoxCount.setSelectedItemIndex(0);
+
+
+	buttonAutomate.registerGraphicComponent(containerName, "buttonAutomate");
+	buttonAutomate.init(automateX + 150, automateY - 40, 150, 50);
 
 	int labelOffset=23;
 	int setupPos=590;
@@ -405,6 +422,7 @@ MenuStateCustomGame::MenuStateCustomGame(Program *program, MainMenu *mainMenu, b
 	//texts
 	buttonReturn.setText(lang.get("Return"));
 	buttonPlayNow.setText(lang.get("PlayNow"));
+	buttonAutomate.setText("Automate");
 	buttonRestoreLastSettings.setText(lang.get("ReloadLastGameSettings"));
 
     controlItems.push_back(lang.get("Closed"));
@@ -646,6 +664,16 @@ void MenuStateCustomGame::mouseClick(int x, int y, MouseButton mouseButton){
             PlayNow();
 
             SystemFlags::OutputDebug(SystemFlags::debugSystem,"In [%s::%s Line %d]\n",__FILE__,__FUNCTION__,__LINE__);
+        }
+        else if(buttonAutomate.mouseClick(x,y) && buttonPlayNow.getEnabled())
+        {
+        	Automate();
+        }
+        else if(listBoxCount.mouseClick(x,y))
+        {
+        	if(listBoxPublishServer.getSelectedItemIndex() == 0) {
+        	                needToRepublishToMasterserver = true;
+        	            }
         }
         else if(buttonRestoreLastSettings.mouseClick(x,y) && buttonRestoreLastSettings.getEnabled()) {
             RestoreLastGameSettings();
@@ -1153,7 +1181,7 @@ void MenuStateCustomGame::PlayNow() {
 
 			SystemFlags::OutputDebug(SystemFlags::debugSystem,"In [%s::%s Line %d]\n",__FILE__,__FUNCTION__,__LINE__);
 			cleanup();
-			program->setState(new Game(program, &gameSettings));
+			program->setState(new Game(program, &gameSettings, false));
 			return;
 		}
 		else {
@@ -1162,6 +1190,77 @@ void MenuStateCustomGame::PlayNow() {
 	}
 }
 
+void MenuStateCustomGame::Automate()
+{
+	saveGameSettingsToFile("lastCustomGamSettings.mgg");
+
+	closeUnusedSlots();
+	CoreData &coreData= CoreData::getInstance();
+	//SoundRenderer &soundRenderer= SoundRenderer::getInstance();
+	//soundRenderer.playFx(coreData.getClickSoundC());
+
+	std::vector<string> randomFactionSelectionList;
+	int RandomCount = 0;
+	for(int i= 0; i < mapInfo.players; ++i) {
+
+		// Check for random faction selection and choose the faction now
+		if(listBoxControls[i].getSelectedItemIndex() != ctClosed) {
+			if(listBoxFactions[i].getSelectedItem() == formatString(GameConstants::RANDOMFACTION_SLOTNAME)) {
+
+				// Max 1000 tries to get a random, unused faction
+				for(int findRandomFaction = 1; findRandomFaction < 1000; ++findRandomFaction) {
+					srand(time(NULL) + findRandomFaction);
+					int selectedFactionIndex = rand() % listBoxFactions[i].getItemCount();
+					string selectedFactionName = listBoxFactions[i].getItem(selectedFactionIndex);
+
+					if(	selectedFactionName != formatString(GameConstants::RANDOMFACTION_SLOTNAME) &&
+						selectedFactionName != formatString(GameConstants::OBSERVER_SLOTNAME) &&
+						std::find(randomFactionSelectionList.begin(),randomFactionSelectionList.end(),selectedFactionName) == randomFactionSelectionList.end()) {
+
+						SystemFlags::OutputDebug(SystemFlags::debugSystem,"In [%s::%s Line %d]\n",__FILE__,__FUNCTION__,__LINE__);
+						listBoxFactions[i].setSelectedItem(selectedFactionName);
+						randomFactionSelectionList.push_back(selectedFactionName);
+						break;
+					}
+				}
+
+				if(listBoxFactions[i].getSelectedItem() == formatString(GameConstants::RANDOMFACTION_SLOTNAME)) {
+
+					// Find first real faction and use it
+					int factionIndexToUse = RandomCount;
+					for(int useIdx = 0; useIdx < listBoxFactions[i].getItemCount(); useIdx++) {
+						string selectedFactionName = listBoxFactions[i].getItem(useIdx);
+						if(	selectedFactionName != formatString(GameConstants::RANDOMFACTION_SLOTNAME) &&
+							selectedFactionName != formatString(GameConstants::OBSERVER_SLOTNAME)) {
+							factionIndexToUse = useIdx;
+							break;
+						}
+					}
+					listBoxFactions[i].setSelectedItemIndex(factionIndexToUse);
+					randomFactionSelectionList.push_back(listBoxFactions[i].getItem(factionIndexToUse));
+				}
+
+				RandomCount++;
+			}
+		}
+	}
+
+	if(RandomCount > 0) {
+		needToSetChangedGameSettings = true;
+	}
+
+	GameSettings gameSettings;
+	loadGameSettings(&gameSettings);
+
+	assert(program != NULL);
+	cleanup();
+	string debugTest = listBoxCount.getSelectedItem();
+	int temp = strToInt(debugTest);
+	program->setState(new Automation(program, &gameSettings, temp));
+	return;
+}
+
+
 void MenuStateCustomGame::mouseMove(int x, int y, const MouseState *ms){
 	if (mainMessageBox.getEnabled()) {
 		mainMessageBox.mouseMove(x, y);
@@ -1169,6 +1268,9 @@ void MenuStateCustomGame::mouseMove(int x, int y, const MouseState *ms){
 	buttonReturn.mouseMove(x, y);
 	buttonPlayNow.mouseMove(x, y);
 	buttonRestoreLastSettings.mouseMove(x, y);
+
+	buttonAutomate.mouseMove(x,y);
+	listBoxCount.mouseMove(x,y);
 
 	bool editingPlayerName = false;
 	for(int i = 0; i < GameConstants::maxPlayers; ++i) {
@@ -1228,6 +1330,10 @@ void MenuStateCustomGame::render() {
 			renderer.renderButton(&buttonReturn);
 			renderer.renderButton(&buttonPlayNow);
 			renderer.renderButton(&buttonRestoreLastSettings);
+
+			renderer.renderButton(&buttonAutomate);
+			renderer.renderLabel(&labelCount);
+			renderer.renderListBox(&listBoxCount);
 
 			// Get a reference to the player texture cache
 			std::map<int,Texture2D *> &crcPlayerTextureCache = CacheManager::getCachedItem< std::map<int,Texture2D *> >(GameConstants::playerTextureCacheLookupKey);

@@ -42,11 +42,12 @@ Game *thisGamePtr = NULL;
 
 const float PHOTO_MODE_MAXHEIGHT = 500.0;
 
-Game::Game(Program *program, const GameSettings *gameSettings):
+Game::Game(Program *program, const GameSettings *gameSettings, bool isAutomation):
 	ProgramState(program), lastMousePos(0), isFirstRender(true)
 {
 	SystemFlags::OutputDebug(SystemFlags::debugSystem,"In [%s::%s Line: %d]\n",__FILE__,__FUNCTION__,__LINE__);
 
+	this->isAutomation = isAutomation;
 	this->program = program;
 	Unit::setGame(this);
 	gameStarted = false;
@@ -360,7 +361,7 @@ string Game::findFactionLogoFile(const GameSettings *settings, Logger *logger,st
 }
 
 void Game::load() {
-	load(lgt_All);
+		load(lgt_All);
 }
 
 void Game::load(LoadGameItem loadTypes) {
@@ -693,150 +694,179 @@ void Game::init(bool initForPreviewOnly)
 
 // ==================== update ====================
 
+Stats* Game::runFast()
+{
+	NetworkManager &networkManager= NetworkManager::getInstance();
+	bool enableServerControlledAI 	= this->gameSettings.getEnableServerControlledAI();
+	bool isNetworkGame 				= this->gameSettings.isNetworkGame();
+	NetworkRole role 				= networkManager.getNetworkRole();
+	while(!gameOver) {
+		for(int j = 0; j < world.getFactionCount(); ++j) {
+			Faction *faction = world.getFaction(j);
+			if(	faction->getCpuControl(enableServerControlledAI,isNetworkGame,role) == true &&
+					scriptManager.getPlayerModifiers(j)->getAiEnabled() == true) {
+				aiInterfaces[j]->update();
+			}
+		}
+		world.update();
+		commander.signalNetworkUpdate(this);
+		checkWinner();
+	}
+	quitTriggeredIndicator = true;
+
+	return world.getStats();
+}
+
 //update
 void Game::update() {
-	//SystemFlags::OutputDebug(SystemFlags::debugSystem,"In [%s::%s Line: %d]\n",__FILE__,__FUNCTION__,__LINE__);
 
-	try {
-		Chrono chrono;
-		chrono.start();
-
-		// a) Updates non dependent on speed
-
-		if(NetworkManager::getInstance().getGameNetworkInterface() != NULL &&
-			NetworkManager::getInstance().getGameNetworkInterface()->getQuit() &&
-		   mainMessageBox.getEnabled() == false &&
-		   errorMessageBox.getEnabled() == false) {
-			SystemFlags::OutputDebug(SystemFlags::debugSystem,"In [%s::%s Line: %d]\n",__FILE__,__FUNCTION__,__LINE__);
-			//quitGame();
-			quitTriggeredIndicator = true;
-			return;
-		}
-
-		//misc
-		updateFps++;
-		mouse2d= (mouse2d+1) % Renderer::maxMouse2dAnim;
-
-		//console
-		console.update();
-
-		//SystemFlags::OutputDebug(SystemFlags::debugSystem,"In [%s::%s Line: %d]\n",__FILE__,__FUNCTION__,__LINE__);
-		// b) Updates depandant on speed
-
-		int updateLoops= getUpdateLoops();
-
-		//SystemFlags::OutputDebug(SystemFlags::debugSystem,"In [%s::%s Line: %d]\n",__FILE__,__FUNCTION__,__LINE__);
-
-		if(chrono.getMillis() > 0) SystemFlags::OutputDebug(SystemFlags::debugPerformance,"In [%s::%s] Line: %d took msecs: %lld\n",__FILE__,__FUNCTION__,__LINE__,chrono.getMillis());
-
-		NetworkManager &networkManager= NetworkManager::getInstance();
-		bool enableServerControlledAI 	= this->gameSettings.getEnableServerControlledAI();
-		bool isNetworkGame 				= this->gameSettings.isNetworkGame();
-		NetworkRole role 				= networkManager.getNetworkRole();
-
-		if(chrono.getMillis() > 0) SystemFlags::OutputDebug(SystemFlags::debugPerformance,"In [%s::%s] Line: %d took msecs: %lld [before ReplaceDisconnectedNetworkPlayersWithAI]\n",__FILE__,__FUNCTION__,__LINE__,chrono.getMillis());
-
-		// Check to see if we are playing a network game and if any players
-		// have disconnected?
-		ReplaceDisconnectedNetworkPlayersWithAI(isNetworkGame, role);
-
-		if(chrono.getMillis() > 0) SystemFlags::OutputDebug(SystemFlags::debugPerformance,"In [%s::%s] Line: %d took msecs: %lld [after ReplaceDisconnectedNetworkPlayersWithAI]\n",__FILE__,__FUNCTION__,__LINE__,chrono.getMillis());
-
-		//update
-		for(int i = 0; i < updateLoops; ++i) {
-			chrono.start();
-			//SystemFlags::OutputDebug(SystemFlags::debugSystem,"In [%s::%s Line: %d]\n",__FILE__,__FUNCTION__,__LINE__);
-
-			//AiInterface
-			for(int j = 0; j < world.getFactionCount(); ++j) {
-				Faction *faction = world.getFaction(j);
-				if(	faction->getCpuControl(enableServerControlledAI,isNetworkGame,role) == true &&
-					scriptManager.getPlayerModifiers(j)->getAiEnabled() == true) {
-
-					if(chrono.getMillis() > 0) SystemFlags::OutputDebug(SystemFlags::debugPerformance,"In [%s::%s Line: %d] [i = %d] faction = %d, factionCount = %d, took msecs: %lld [before AI updates]\n",__FILE__,__FUNCTION__,__LINE__,i,j,world.getFactionCount(),chrono.getMillis());
-
-					aiInterfaces[j]->update();
-
-					if(chrono.getMillis() > 0) SystemFlags::OutputDebug(SystemFlags::debugPerformance,"In [%s::%s Line: %d] [i = %d] faction = %d, factionCount = %d, took msecs: %lld [after AI updates]\n",__FILE__,__FUNCTION__,__LINE__,i,j,world.getFactionCount(),chrono.getMillis());
-				}
-			}
-
-			if(chrono.getMillis() > 0) SystemFlags::OutputDebug(SystemFlags::debugPerformance,"In [%s::%s] Line: %d took msecs: %lld [AI updates]\n",__FILE__,__FUNCTION__,__LINE__,chrono.getMillis());
-			if(chrono.getMillis() > 0) chrono.start();
-
-			//SystemFlags::OutputDebug(SystemFlags::debugSystem,"In [%s::%s Line: %d]\n",__FILE__,__FUNCTION__,__LINE__);
-			//World
-			world.update();
-			if(chrono.getMillis() > 0) SystemFlags::OutputDebug(SystemFlags::debugPerformance,"In [%s::%s] Line: %d took msecs: %lld [world update i = %d]\n",__FILE__,__FUNCTION__,__LINE__,chrono.getMillis(),i);
-			if(chrono.getMillis() > 0) chrono.start();
-
-			//SystemFlags::OutputDebug(SystemFlags::debugSystem,"In [%s::%s Line: %d]\n",__FILE__,__FUNCTION__,__LINE__);
-			// Commander
-			//commander.updateNetwork();
-			commander.signalNetworkUpdate(this);
-
-			if(chrono.getMillis() > 0) SystemFlags::OutputDebug(SystemFlags::debugPerformance,"In [%s::%s] Line: %d took msecs: %lld [commander updateNetwork i = %d]\n",__FILE__,__FUNCTION__,__LINE__,chrono.getMillis(),i);
-			if(chrono.getMillis() > 0) chrono.start();
-
-			//SystemFlags::OutputDebug(SystemFlags::debugSystem,"In [%s::%s Line: %d]\n",__FILE__,__FUNCTION__,__LINE__);
-			//Gui
-			gui.update();
-			if(chrono.getMillis() > 0) SystemFlags::OutputDebug(SystemFlags::debugPerformance,"In [%s::%s] Line: %d took msecs: %lld [gui updating i = %d]\n",__FILE__,__FUNCTION__,__LINE__,chrono.getMillis(),i);
-			if(chrono.getMillis() > 0) chrono.start();
-
-			//SystemFlags::OutputDebug(SystemFlags::debugSystem,"In [%s::%s Line: %d]\n",__FILE__,__FUNCTION__,__LINE__);
-			//Particle systems
-			if(weatherParticleSystem != NULL) {
-				weatherParticleSystem->setPos(gameCamera.getPos());
-			}
-
-			if(chrono.getMillis() > 0) SystemFlags::OutputDebug(SystemFlags::debugPerformance,"In [%s::%s] Line: %d took msecs: %lld [weather particle updating i = %d]\n",__FILE__,__FUNCTION__,__LINE__,chrono.getMillis(),i);
-			if(chrono.getMillis() > 0) chrono.start();
-
-			Renderer &renderer= Renderer::getInstance();
-			renderer.updateParticleManager(rsGame,avgRenderFps);
-			if(chrono.getMillis() > 0) SystemFlags::OutputDebug(SystemFlags::debugPerformance,"In [%s::%s] Line: %d took msecs: %lld [particle manager updating i = %d]\n",__FILE__,__FUNCTION__,__LINE__,chrono.getMillis(),i);
-			if(chrono.getMillis() > 0) chrono.start();
-
-			//good_fpu_control_registers(NULL,__FILE__,__FUNCTION__,__LINE__);
-		}
-
-		//SystemFlags::OutputDebug(SystemFlags::debugSystem,"In [%s::%s Line: %d]\n",__FILE__,__FUNCTION__,__LINE__);
-		//call the chat manager
-		chatManager.updateNetwork();
-		if(chrono.getMillis() > 0) SystemFlags::OutputDebug(SystemFlags::debugPerformance,"In [%s::%s] Line: %d took msecs: %lld [chatManager.updateNetwork]\n",__FILE__,__FUNCTION__,__LINE__,chrono.getMillis());
-		if(chrono.getMillis() > 0) chrono.start();
-
-		//check for quiting status
-		if(NetworkManager::getInstance().getGameNetworkInterface() != NULL &&
-			NetworkManager::getInstance().getGameNetworkInterface()->getQuit() &&
-		   mainMessageBox.getEnabled() == false &&
-		   errorMessageBox.getEnabled() == false) {
-			SystemFlags::OutputDebug(SystemFlags::debugSystem,"In [%s::%s Line: %d]\n",__FILE__,__FUNCTION__,__LINE__);
-			//quitGame();
-			quitTriggeredIndicator = true;
-			return;
-		}
-
-		//update auto test
-		if(Config::getInstance().getBool("AutoTest")){
-			AutoTest::getInstance().updateGame(this);
-		}
-
-		//throw runtime_error("Test!");
-
-		//SystemFlags::OutputDebug(SystemFlags::debugSystem,"In [%s::%s Line: %d]\n",__FILE__,__FUNCTION__,__LINE__);
+	if(this->isAutomation){
+		runFast();
 	}
-	catch(const exception &ex) {
-		SystemFlags::OutputDebug(SystemFlags::debugError,"In [%s::%s Line: %d] Error [%s]\n",__FILE__,__FUNCTION__,__LINE__,ex.what());
-		SystemFlags::OutputDebug(SystemFlags::debugSystem,"In [%s::%s Line: %d] Error [%s]\n",__FILE__,__FUNCTION__,__LINE__,ex.what());
+	else{
+		//SystemFlags::OutputDebug(SystemFlags::debugSystem,"In [%s::%s Line: %d]\n",__FILE__,__FUNCTION__,__LINE__);
 
-		NetworkManager &networkManager= NetworkManager::getInstance();
-		if(networkManager.getGameNetworkInterface() != NULL) {
-			networkManager.getGameNetworkInterface()->quitGame(true);
+		try {
+			Chrono chrono;
+			chrono.start();
+
+			// a) Updates non dependent on speed
+
+			if(NetworkManager::getInstance().getGameNetworkInterface() != NULL &&
+				NetworkManager::getInstance().getGameNetworkInterface()->getQuit() &&
+			   mainMessageBox.getEnabled() == false &&
+			   errorMessageBox.getEnabled() == false) {
+				SystemFlags::OutputDebug(SystemFlags::debugSystem,"In [%s::%s Line: %d]\n",__FILE__,__FUNCTION__,__LINE__);
+				//quitGame();
+				quitTriggeredIndicator = true;
+				return;
+			}
+
+			//misc
+			updateFps++;
+			mouse2d= (mouse2d+1) % Renderer::maxMouse2dAnim;
+
+			//console
+			console.update();
+
+			//SystemFlags::OutputDebug(SystemFlags::debugSystem,"In [%s::%s Line: %d]\n",__FILE__,__FUNCTION__,__LINE__);
+			// b) Updates depandant on speed
+
+			int updateLoops= getUpdateLoops();
+
+			//SystemFlags::OutputDebug(SystemFlags::debugSystem,"In [%s::%s Line: %d]\n",__FILE__,__FUNCTION__,__LINE__);
+
+			if(chrono.getMillis() > 0) SystemFlags::OutputDebug(SystemFlags::debugPerformance,"In [%s::%s] Line: %d took msecs: %lld\n",__FILE__,__FUNCTION__,__LINE__,chrono.getMillis());
+
+			NetworkManager &networkManager= NetworkManager::getInstance();
+			bool enableServerControlledAI 	= this->gameSettings.getEnableServerControlledAI();
+			bool isNetworkGame 				= this->gameSettings.isNetworkGame();
+			NetworkRole role 				= networkManager.getNetworkRole();
+
+			if(chrono.getMillis() > 0) SystemFlags::OutputDebug(SystemFlags::debugPerformance,"In [%s::%s] Line: %d took msecs: %lld [before ReplaceDisconnectedNetworkPlayersWithAI]\n",__FILE__,__FUNCTION__,__LINE__,chrono.getMillis());
+
+			// Check to see if we are playing a network game and if any players
+			// have disconnected?
+			ReplaceDisconnectedNetworkPlayersWithAI(isNetworkGame, role);
+
+			if(chrono.getMillis() > 0) SystemFlags::OutputDebug(SystemFlags::debugPerformance,"In [%s::%s] Line: %d took msecs: %lld [after ReplaceDisconnectedNetworkPlayersWithAI]\n",__FILE__,__FUNCTION__,__LINE__,chrono.getMillis());
+
+			//update
+			for(int i = 0; i < updateLoops; ++i) {
+				chrono.start();
+				//SystemFlags::OutputDebug(SystemFlags::debugSystem,"In [%s::%s Line: %d]\n",__FILE__,__FUNCTION__,__LINE__);
+
+				//AiInterface
+				for(int j = 0; j < world.getFactionCount(); ++j) {
+					Faction *faction = world.getFaction(j);
+					if(	faction->getCpuControl(enableServerControlledAI,isNetworkGame,role) == true &&
+						scriptManager.getPlayerModifiers(j)->getAiEnabled() == true) {
+
+						if(chrono.getMillis() > 0) SystemFlags::OutputDebug(SystemFlags::debugPerformance,"In [%s::%s Line: %d] [i = %d] faction = %d, factionCount = %d, took msecs: %lld [before AI updates]\n",__FILE__,__FUNCTION__,__LINE__,i,j,world.getFactionCount(),chrono.getMillis());
+
+						aiInterfaces[j]->update();
+
+						if(chrono.getMillis() > 0) SystemFlags::OutputDebug(SystemFlags::debugPerformance,"In [%s::%s Line: %d] [i = %d] faction = %d, factionCount = %d, took msecs: %lld [after AI updates]\n",__FILE__,__FUNCTION__,__LINE__,i,j,world.getFactionCount(),chrono.getMillis());
+					}
+				}
+
+				if(chrono.getMillis() > 0) SystemFlags::OutputDebug(SystemFlags::debugPerformance,"In [%s::%s] Line: %d took msecs: %lld [AI updates]\n",__FILE__,__FUNCTION__,__LINE__,chrono.getMillis());
+				if(chrono.getMillis() > 0) chrono.start();
+
+				//SystemFlags::OutputDebug(SystemFlags::debugSystem,"In [%s::%s Line: %d]\n",__FILE__,__FUNCTION__,__LINE__);
+				//World
+				world.update();
+				if(chrono.getMillis() > 0) SystemFlags::OutputDebug(SystemFlags::debugPerformance,"In [%s::%s] Line: %d took msecs: %lld [world update i = %d]\n",__FILE__,__FUNCTION__,__LINE__,chrono.getMillis(),i);
+				if(chrono.getMillis() > 0) chrono.start();
+
+				//SystemFlags::OutputDebug(SystemFlags::debugSystem,"In [%s::%s Line: %d]\n",__FILE__,__FUNCTION__,__LINE__);
+				// Commander
+				//commander.updateNetwork();
+				commander.signalNetworkUpdate(this);
+
+				if(chrono.getMillis() > 0) SystemFlags::OutputDebug(SystemFlags::debugPerformance,"In [%s::%s] Line: %d took msecs: %lld [commander updateNetwork i = %d]\n",__FILE__,__FUNCTION__,__LINE__,chrono.getMillis(),i);
+				if(chrono.getMillis() > 0) chrono.start();
+
+				//SystemFlags::OutputDebug(SystemFlags::debugSystem,"In [%s::%s Line: %d]\n",__FILE__,__FUNCTION__,__LINE__);
+				//Gui
+				gui.update();
+				if(chrono.getMillis() > 0) SystemFlags::OutputDebug(SystemFlags::debugPerformance,"In [%s::%s] Line: %d took msecs: %lld [gui updating i = %d]\n",__FILE__,__FUNCTION__,__LINE__,chrono.getMillis(),i);
+				if(chrono.getMillis() > 0) chrono.start();
+
+				//SystemFlags::OutputDebug(SystemFlags::debugSystem,"In [%s::%s Line: %d]\n",__FILE__,__FUNCTION__,__LINE__);
+				//Particle systems
+				if(weatherParticleSystem != NULL) {
+					weatherParticleSystem->setPos(gameCamera.getPos());
+				}
+
+				if(chrono.getMillis() > 0) SystemFlags::OutputDebug(SystemFlags::debugPerformance,"In [%s::%s] Line: %d took msecs: %lld [weather particle updating i = %d]\n",__FILE__,__FUNCTION__,__LINE__,chrono.getMillis(),i);
+				if(chrono.getMillis() > 0) chrono.start();
+
+				Renderer &renderer= Renderer::getInstance();
+				renderer.updateParticleManager(rsGame,avgRenderFps);
+				if(chrono.getMillis() > 0) SystemFlags::OutputDebug(SystemFlags::debugPerformance,"In [%s::%s] Line: %d took msecs: %lld [particle manager updating i = %d]\n",__FILE__,__FUNCTION__,__LINE__,chrono.getMillis(),i);
+				if(chrono.getMillis() > 0) chrono.start();
+
+				//good_fpu_control_registers(NULL,__FILE__,__FUNCTION__,__LINE__);
+			}
+
+			//SystemFlags::OutputDebug(SystemFlags::debugSystem,"In [%s::%s Line: %d]\n",__FILE__,__FUNCTION__,__LINE__);
+			//call the chat manager
+			chatManager.updateNetwork();
+			if(chrono.getMillis() > 0) SystemFlags::OutputDebug(SystemFlags::debugPerformance,"In [%s::%s] Line: %d took msecs: %lld [chatManager.updateNetwork]\n",__FILE__,__FUNCTION__,__LINE__,chrono.getMillis());
+			if(chrono.getMillis() > 0) chrono.start();
+
+			//check for quiting status
+			if(NetworkManager::getInstance().getGameNetworkInterface() != NULL &&
+				NetworkManager::getInstance().getGameNetworkInterface()->getQuit() &&
+			   mainMessageBox.getEnabled() == false &&
+			   errorMessageBox.getEnabled() == false) {
+				SystemFlags::OutputDebug(SystemFlags::debugSystem,"In [%s::%s Line: %d]\n",__FILE__,__FUNCTION__,__LINE__);
+				//quitGame();
+				quitTriggeredIndicator = true;
+				return;
+			}
+
+			//update auto test
+			if(Config::getInstance().getBool("AutoTest")){
+				AutoTest::getInstance().updateGame(this);
+			}
+
+			//throw runtime_error("Test!");
+
+			//SystemFlags::OutputDebug(SystemFlags::debugSystem,"In [%s::%s Line: %d]\n",__FILE__,__FUNCTION__,__LINE__);
 		}
-		if(errorMessageBox.getEnabled() == false) {
-            ErrorDisplayMessage(ex.what(),true);
+		catch(const exception &ex) {
+			SystemFlags::OutputDebug(SystemFlags::debugError,"In [%s::%s Line: %d] Error [%s]\n",__FILE__,__FUNCTION__,__LINE__,ex.what());
+			SystemFlags::OutputDebug(SystemFlags::debugSystem,"In [%s::%s Line: %d] Error [%s]\n",__FILE__,__FUNCTION__,__LINE__,ex.what());
+
+			NetworkManager &networkManager= NetworkManager::getInstance();
+			if(networkManager.getGameNetworkInterface() != NULL) {
+				networkManager.getGameNetworkInterface()->quitGame(true);
+			}
+			if(errorMessageBox.getEnabled() == false) {
+				ErrorDisplayMessage(ex.what(),true);
+			}
 		}
 	}
 }

@@ -25,6 +25,7 @@
 #include "network_interface.h"
 #include "types.h"
 #include "leak_dumper.h"
+#include "stats.h"
 
 using std::vector;
 using namespace Shared::Platform;
@@ -35,6 +36,7 @@ namespace Glest{ namespace Game{
 class GraphicMessageBox;
 
 enum LoadGameItem {
+	lgt_None			= 0x00,
 	lgt_FactionPreview 	= 0x01,
 	lgt_TileSet 		= 0x02,
 	lgt_TechTree		= 0x04,
@@ -113,9 +115,10 @@ private:
 	Program *program;
 
 	bool gameStarted;
+	bool isAutomation;
 
 public:
-    Game(Program *program, const GameSettings *gameSettings);
+    Game(Program *program, const GameSettings *gameSettings, bool isAutomation);
     ~Game();
 
     //get
@@ -145,6 +148,7 @@ public:
 	virtual void updateCamera();
 	virtual void render();
 	virtual void tick();
+	Stats* runFast();
 
     //event managing
     virtual void keyDown(char key);
