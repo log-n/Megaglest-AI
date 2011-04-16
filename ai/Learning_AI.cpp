@@ -18,7 +18,7 @@ namespace Glest { namespace Game {
 void LearningAI::init(AiInterface *aiInterface, int useStartLocation) 
 {
 	random.init(time(NULL));
-	probSelect = true;
+	probSelect = false;
 	logs = fopen("learning_ai_log_file.txt", "w+");
 	this->aiInterface= aiInterface;
 	if(useStartLocation == -1) 
@@ -317,6 +317,20 @@ void LearningAI ::  init_qvalues()
 
 double LearningAI :: best_qvalue(int &state, int &best_action)
 {
+	state = choose_one_on_prob(stateProbabs, NUM_OF_STATES);
+
+	double qvals [NUM_OF_ACTIONS];
+	for(int a=0; a< NUM_OF_ACTIONS; a++)
+	{
+		if(qValues[state][a] >0){
+			qvals[a] = qValues[state][a];
+		}
+		else{
+			qvals[a] = 0;
+		}
+	}
+	best_action = choose_one_on_prob(qvals, NUM_OF_ACTIONS);
+	/*
   int  s, a,best_act=0;
   double best_val = -1E+10;
 
@@ -334,12 +348,12 @@ double LearningAI :: best_qvalue(int &state, int &best_action)
 			}
 	  }
   }
-
+*/
   fprintf(logs, "\nIn best Value !!! state %d Action %d\n", state , best_action);
 
   fflush(logs);
 
-  return (qValues[state][best_act]);
+  return (qValues[state][best_action]);
 }
 
 double LearningAI:: probable_qvalue(int &best_action)
@@ -358,42 +372,56 @@ double LearningAI:: probable_qvalue(int &best_action)
 		actQvals[a] = sum;
 	}
 
-	normalizeProbabilities(actQvals, NUM_OF_ACTIONS);
+	best_action = choose_one_on_prob(actQvals, NUM_OF_ACTIONS);
+	return actQvals[best_action];
+}
 
-  float zero = 0.0, one = 1.0;
-  float selection = random.randRange(zero, one);
+int LearningAI:: choose_one_on_prob(double arr[], int size)
+{
+	for(int i=0; i<size ; i++)
+	{
+		if (arr[i] < 0){
+			assert(false);
+		}
+	}
 
-  double prob_start = 0; int index = 0, ret_act = -1;
-  double prob_end = actQvals[index];
+	normalizeProbabilities(arr, size);
 
-  while(true)
-  {
-	  if(prob_start <= selection  && prob_end >= selection)
+	  float zero = 0.0, one = 1.0;
+	  float selection = random.randRange(zero, one);
+
+	  int index = 0;
+	  double prob_start = 0;
+	  double prob_end = arr[index];
+
+	  while(true)
 	  {
-		 best_action = index;
-		 return ret_act;
+		  if(prob_start <= selection  && prob_end >= selection)
+		  {
+			 return index;
+		  }
+		  index++;
+		  if(index == NUM_OF_ACTIONS)
+		  {
+			  assert(false);
+		  }
+		  prob_start = prob_end;
+		  prob_end += arr[index];
 	  }
-	  index++;
-	  if(index == NUM_OF_ACTIONS)
-	  {
-		  assert(false);
-	  }
-	  prob_start = prob_end;
-	  prob_end += actQvals[index];
-  }
-
-
 }
 
 void  LearningAI :: update_qvalues(int olds,int news,int action,double reward)
 {
-	double best_qval, qval;
+	/*double best_qval, qval;
 	int newAct;
 	best_qval = best_qvalue(news,newAct);
 	fprintf(logs, "Previous Q value: State %d Action %d : %f \n",olds, action, qValues[olds][action] );
 	qval = qValues[olds][action];	
-	qValues[olds][action] =   (1 - BETA)*qval + BETA*(reward  + GAMMA*best_qval);      
+	qValues[olds][action] =   (1 - BETA)*qval + BETA*(reward  + GAMMA*best_qval);    */
 	
+	double qval = qValues[olds][action];
+	qValues[olds][action] =   (1 - BETA)*qval + BETA*(reward);
+
 	fprintf(logs, "Updated Q value : State %d Action %d : %f \n",olds, action, qValues[olds][action] );
 }
 

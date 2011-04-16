@@ -222,6 +222,7 @@ private:
 	double probable_qvalue(int &best_action);
 	int choose_probable_action  ();
 	void  update_probable_qvalues(int action, double reward);
+	int choose_one_on_prob(double arr[], int size);
 };
 }}
 
