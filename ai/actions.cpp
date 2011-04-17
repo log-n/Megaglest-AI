@@ -347,11 +347,14 @@ bool Actions::produceOneUnit(UnitClass unitClass)
 bool Actions::upgrade()
 {
 	  bool flag = false;
+	  int cnt = 0;
 		//for each unit
 		for(int i=0; i<aiInterface->getMyUnitCount(); ++i)
 		{
 			//for each command
+			fprintf(logs, "Upgrade for unit %d \n", i);
 			const UnitType *ut= aiInterface->getMyUnit(i)->getType();
+			cnt = 0 ;
 			for(int j=0; j<ut->getCommandTypeCount(); ++j)
 			{
 				const CommandType *ct= ut->getCommandType(j);
@@ -359,6 +362,7 @@ bool Actions::upgrade()
 				//if the command is upgrade
 				if(ct->getClass()==ccUpgrade)
 				{
+					cnt ++;
 					const UpgradeCommandType *uct= static_cast<const UpgradeCommandType*>(ct);
 					const UpgradeType *producedUpgrade= uct->getProducedUpgrade();
 					if(aiInterface->reqsOk(uct))
@@ -367,9 +371,16 @@ bool Actions::upgrade()
 							aiInterface->giveCommand(i, uct);
 							flag = true;
 					}
-				}
+					else
+					{
+						fprintf(logs, " Request command not ok...\n");
+					}
+				}			
 			}
+		if(cnt == 0 )
+			fprintf(logs, "No unit for upgrade available... !\n");
 		}
+		
 		return flag;
 }
 
@@ -408,48 +419,94 @@ bool Actions::buildDefensiveBuilding()
 		const UnitType *ut= aiInterface->getMyUnit(i)->getType();
 		const Unit * unit = aiInterface->getMyUnit(i);
 		if(!unit->anyCommand() || unit->getCurrCommand()->getCommandType()->getClass()==ccStop)
-		{
-			fprintf(logs, "unit %d is free for building...\n", i);
-			for(int j=0; j<ut->getCommandTypeCount(); ++j)
-			{
-				const CommandType *ct= ut->getCommandType(j);
-				//if the command is build
-				if(ct->getClass()==ccBuild)
+		{		
+				for(int j=0; j<ut->getCommandTypeCount(); ++j)
 				{
-					const BuildCommandType *bct= static_cast<const BuildCommandType*>(ct);
-
-					//for each building
-					for(int k=0; k<bct->getBuildingCount(); ++k)
+					fprintf(logs, "unit %d is free for building...\n", i);
+					const CommandType *ct= ut->getCommandType(j);
+					//if the command is build
+					if(ct->getClass()==ccBuild)
 					{
-						const UnitType *building= bct->getBuilding(k);
-						if(aiInterface->reqsOk(bct) && aiInterface->reqsOk(building))
+						fprintf(logs, "unit %d is free for building...\n", i);
+						const BuildCommandType *bct= static_cast<const BuildCommandType*>(ct);
+						//for each building
+						for(int k=0; k<bct->getBuildingCount(); ++k)
 						{
-							if(building->hasSkillClass(scAttack))
+							const UnitType *building= bct->getBuilding(k);
+							if(aiInterface->reqsOk(bct) && aiInterface->reqsOk(building))
 							{
-								if(aiInterface->checkCosts(building) == false)
+								fprintf(logs, "%d building can be built....  \n", k);
+								if(building->hasSkillClass(scAttack))
 								{
-									fprintf(logs, "constly... to build..\n");
-										return false;
-								}
-								Vec2i pos;
-								Vec2i searchPos= getRandomHomePosition() +  aiInterface->getHomeLocation();
-			    				if(findPosForBuilding(building, searchPos, pos))
-								{
-									aiInterface->giveCommand(i, bct, pos,building);
-									fprintf(logs, "Command sent to AI for build defensive building \n");
+									fprintf(logs, "%d is Defensive building  \n", k);
+									if(aiInterface->checkCosts(building) == false)
+									{
+										fprintf(logs, "constly... to build..\n");
+											return false;
+									}
+									Vec2i pos;
+									Vec2i searchPos= getRandomHomePosition() +  aiInterface->getHomeLocation();
+			    					if(findPosForBuilding(building, searchPos, pos))
+									{
+										aiInterface->giveCommand(i, bct, pos,building);
+										fprintf(logs, "Command sent to AI for build defensive building \n");
 
-									return true;
-								}
+										return true;
+									}
 
+								}
 							}
 						}
 					}
-				}
-			}
+				}			
 		}
 		else
 		{
 			fprintf(logs, "Unit %d already has a command...\n", i);
+			bool currentlyHarvesting = (unit->getCurrSkill()->getClass() == scHarvest);
+			if(currentlyHarvesting)
+			{
+
+				for(int j=0; j<ut->getCommandTypeCount(); ++j)
+				{
+					fprintf(logs, "unit %d is free for building...\n", i);
+					const CommandType *ct= ut->getCommandType(j);
+					//if the command is build
+					if(ct->getClass()==ccBuild)
+					{
+						fprintf(logs, "unit %d is free for building...\n", i);
+						const BuildCommandType *bct= static_cast<const BuildCommandType*>(ct);
+						//for each building
+						for(int k=0; k<bct->getBuildingCount(); ++k)
+						{
+							const UnitType *building= bct->getBuilding(k);
+							if(aiInterface->reqsOk(bct) && aiInterface->reqsOk(building))
+							{
+								fprintf(logs, "%d building can be built....  \n", k);
+								if(building->hasSkillClass(scAttack))
+								{
+									fprintf(logs, "%d is Defensive building  \n", k);
+									if(aiInterface->checkCosts(building) == false)
+									{
+										fprintf(logs, "constly... to build..\n");
+											return false;
+									}
+									Vec2i pos;
+									Vec2i searchPos= getRandomHomePosition() +  aiInterface->getHomeLocation();
+			    					if(findPosForBuilding(building, searchPos, pos))
+									{
+										aiInterface->giveCommand(i, bct, pos,building);
+										fprintf(logs, "Command sent to AI for build defensive building \n");
+
+										return true;
+									}
+
+								}
+							}
+						}
+					}
+				}			
+			}
 			fflush(logs);
 			continue;
 		}
@@ -484,49 +541,89 @@ bool  Actions::buildWarriorProducerBuilding()
 		const Unit * unit = aiInterface->getMyUnit(i);
 
 		if(!unit->anyCommand() || unit->getCurrCommand()->getCommandType()->getClass()==ccStop)
-		{
-
-			fprintf(logs, "unit %d is free for command... \n", i);
-			for(int j=0; j<ut->getCommandTypeCount(); ++j)
-			{
-				const CommandType *ct= ut->getCommandType(j);
-				//if the command is build
-				if(ct->getClass()==ccBuild)
+		{			
+				fprintf(logs, "unit %d is free for command... \n", i);
+				for(int j=0; j<ut->getCommandTypeCount(); ++j)
 				{
-					const BuildCommandType *bct= static_cast<const BuildCommandType*>(ct);
-
-					//for each building
-					for(int k=0; k<bct->getBuildingCount(); ++k)
+					const CommandType *ct= ut->getCommandType(j);
+					//if the command is build
+					if(ct->getClass()==ccBuild)
 					{
-						const UnitType *building= bct->getBuilding(k);
-						if(aiInterface->reqsOk(bct) && aiInterface->reqsOk(building))
+						const BuildCommandType *bct= static_cast<const BuildCommandType*>(ct);
+
+						//for each building
+						for(int k=0; k<bct->getBuildingCount(); ++k)
 						{
-							if(isWarriorProducer(building))
+							const UnitType *building= bct->getBuilding(k);
+							if(aiInterface->reqsOk(bct) && aiInterface->reqsOk(building))
 							{
-								if(aiInterface->checkCosts(building) == false)
+								if(isWarriorProducer(building))
 								{
-									fprintf(logs, "costly... \n");
-										return false;
+									fprintf(logs, "Warrior prodecer building!!!\n");
+									if(aiInterface->checkCosts(building) == false)
+									{
+										fprintf(logs, "costly... \n");
+											return false;
+									}
+									Vec2i pos;
+									Vec2i searchPos= getRandomHomePosition() +  aiInterface->getHomeLocation();
+				    				if(findPosForBuilding(building, searchPos, pos))
+									{
+										aiInterface->giveCommand(i, bct, pos,building);
+										fprintf(logs, "Command sent to AI for warrior producer building \n");
+
+										return true;
+									}
 								}
-								Vec2i pos;
-								Vec2i searchPos= getRandomHomePosition() +  aiInterface->getHomeLocation();
-				    			if(findPosForBuilding(building, searchPos, pos))
+							}
+						}
+					}
+				}			
+		}
+		else
+		{
+			fprintf(logs, "Unit already has command... \n");
+			bool currentlyHarvesting = (unit->getCurrSkill()->getClass() == scHarvest);
+			if(currentlyHarvesting)
+			{
+				fprintf(logs, "unit %d is free for command... \n", i);
+				for(int j=0; j<ut->getCommandTypeCount(); ++j)
+				{
+					const CommandType *ct= ut->getCommandType(j);
+					//if the command is build
+					if(ct->getClass()==ccBuild)
+					{
+						const BuildCommandType *bct= static_cast<const BuildCommandType*>(ct);
+
+						//for each building
+						for(int k=0; k<bct->getBuildingCount(); ++k)
+						{
+							const UnitType *building= bct->getBuilding(k);
+							if(aiInterface->reqsOk(bct) && aiInterface->reqsOk(building))
+							{
+								if(isWarriorProducer(building))
 								{
-									aiInterface->giveCommand(i, bct, pos,building);
-									fprintf(logs, "Command sent to AI for warrior producer building \n");
+									fprintf(logs, "Warrior prodecer building!!!\n");
+									if(aiInterface->checkCosts(building) == false)
+									{
+										fprintf(logs, "costly... \n");
+											return false;
+									}
+									Vec2i pos;
+									Vec2i searchPos= getRandomHomePosition() +  aiInterface->getHomeLocation();
+				    				if(findPosForBuilding(building, searchPos, pos))
+									{
+										aiInterface->giveCommand(i, bct, pos,building);
+										fprintf(logs, "Command sent to AI for warrior producer building \n");
 
-									return true;
+										return true;
+									}
 								}
-
 							}
 						}
 					}
 				}
 			}
-		}
-		else
-		{
-			fprintf(logs, "Unit already has command... \n");
 			fflush(logs);
 			continue;
 		}

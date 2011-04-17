@@ -47,7 +47,7 @@ void LearningAI::init(AiInterface *aiInterface, int useStartLocation)
 	lastActionSucceed = action->selectAction(lastAct);
 	//best_qvalue(int &state, int &best_action);
 
-	interval = 5000;
+	interval = 50;
 	fprintf(logs," out of init...\n");
 	fflush(logs);
 }
@@ -66,7 +66,7 @@ void LearningAI::printQvalues()
 void LearningAI::update()
 {
 		
-		//if((aiInterface->getTimer() % (interval * GameConstants::updateFps / 1000)) == 0)
+		if((aiInterface->getTimer() % (interval * GameConstants::updateFps / 1000)) == 0)
 		{
 //		printQvalues();
 			aiInterface->printLog(4, " Inside update  :  " + intToStr(aiInterface->getTimer() )+"\n");
@@ -144,7 +144,8 @@ void LearningAI:: getStateProbabilityDistribution(Snapshot *currSnapshot)
 	if(resourceAmt == 0){
 		resourceAmt = 1;
 	}
-
+	fprintf(logs , "Creating state probability distribution..\n");
+	fprintf(logs , "Resources amount : %d .. Max resources :  %d \n", resourceAmt , maxResource );
 	stateProbabs[stateGatherResource] =(maxWorkers/(currSnapshot-> noOfWorkers +1) )* featureWeights[featureNoOfWorkers] + (maxResource/resourceAmt)  * featureWeights[featureRsourcesAmountWood];
 		
 	 //stateproduceUnit
@@ -157,6 +158,7 @@ void LearningAI:: getStateProbabilityDistribution(Snapshot *currSnapshot)
 	//stateUpgrade
 	int totalUnits = currSnapshot-> noOfWorkers   +  currSnapshot-> noOfWarriors  + currSnapshot-> noOfBuildings  ;
 	 stateProbabs[stateUpgrade] = totalUnits * featureWeights[featureUpgradeCount] ;
+	fprintf(logs, "no. of units : %d \n" , totalUnits);
 
 	//stateAttack
 	stateProbabs[stateAttack] = currSnapshot->readyForAttack * featureWeights[featureReadyForAttack]  ;
@@ -211,7 +213,7 @@ void  LearningAI:: assignFeatureWeights()
     //noOfBuildings ;     
 	featureWeights[featureNoOfBuildings ]  = 13 ;
 	//upgradeCount;
-	featureWeights[featureUpgradeCount]  = 10 ;
+	featureWeights[featureUpgradeCount]  = 5 ;
 	//resourcesAmounts weights 
 	//resource_name == "gold" 
 	featureWeights[featureRsourcesAmountGold]  = 20 ;
@@ -227,7 +229,10 @@ void  LearningAI:: assignFeatureWeights()
 	featureWeights[featureRsourcesAmountHousing]  = 10 ;
 }
 
-LearningAI :: ~LearningAI(){}
+LearningAI :: ~LearningAI(){
+	printQvalues();
+//battleEnd();
+}
 
 void LearningAI :: battleEnd()
 {
@@ -246,9 +251,10 @@ void LearningAI :: battleEnd()
 void LearningAI ::  init_qvalues()
 {
 		FILE *  fp = fopen("Q_values.txt" , "r");
-		fprintf(logs, "Q values read from file..\n");
+
 		if(fp != NULL)
 		{
+			fprintf(logs, "Q values read from file..\n");
 			rewind (fp);
 			fscanf(fp, "%d", &GameNumber);
 			GameNumber++;
@@ -278,7 +284,7 @@ void LearningAI ::  init_qvalues()
 				qValues[s][a] = -1;
 			}
 			else{
-				qValues[s][a] = -1 * INT_MAX;;
+				qValues[s][a] =0; // -1 * INT_MAX;;
 			}
 		}
 
@@ -318,18 +324,23 @@ void LearningAI ::  init_qvalues()
 double LearningAI :: best_qvalue(int &state, int &best_action)
 {
 	state = choose_one_on_prob(stateProbabs, NUM_OF_STATES);
-
+	fprintf(logs, "state returned is : %d \n", state);
 	double qvals [NUM_OF_ACTIONS];
+
 	for(int a=0; a< NUM_OF_ACTIONS; a++)
 	{
-		if(qValues[state][a] >0){
+		if(qValues[state][a] >0)
+		{
 			qvals[a] = qValues[state][a];
 		}
-		else{
+		else
+		{
 			qvals[a] = 0;
 		}
 	}
 	best_action = choose_one_on_prob(qvals, NUM_OF_ACTIONS);
+
+	fprintf(logs, "Action chosen : %d ", best_action);
 	/*
   int  s, a,best_act=0;
   double best_val = -1E+10;
@@ -507,9 +518,9 @@ int LearningAI ::  choose_probable_action  ()
 #define DEFEND_SUCCESS_REWARD 200
 #define KILL_REWARD 100
 #define ARMY_READY_REWARD 100
-#define ARMY_BUILD_SLOW_PENALTY -30
-#define ATTACK_SLOW_PENALTY -20
-#define ARMY_BACKWARD_PENALTY -10
+#define ARMY_BUILD_SLOW_PENALTY 0
+#define ATTACK_SLOW_PENALTY 0
+#define ARMY_BACKWARD_PENALTY 0
 #define REPAIR_DAMAGE_UNIT_REWARD 20
 #define EMERGENCY_WORKERS_REWARD  25
 #define MORE_WORKERS_REWARD  15
@@ -593,8 +604,8 @@ float LearningAI :: getReward(Snapshot* preSnapshot, Snapshot* newSnapshot, bool
 				reward += ( newSnapshot->resourcesAmount[ i ] - preSnapshot->resourcesAmount[ i ] ) * EMERGENCY_RESOURCE_REWARD;
 			else if( newSnapshot->resourcesAmount[ i ] < MAX_RESOURCE )
 				reward += ( newSnapshot->resourcesAmount[ i ] - preSnapshot->resourcesAmount[ i ] ) * MORE_RESOURCE_REWARD;
-			else
-				reward += ( MAX_RESOURCE - preSnapshot->resourcesAmount[ i ] ) * MORE_RESOURCE_REWARD;
+//			else
+//				reward += ( MAX_RESOURCE - preSnapshot->resourcesAmount[ i ] ) * MORE_RESOURCE_REWARD;
 		}
 	fprintf(logs, "Reward by no  of resources count : %f \n", reward);
     }
