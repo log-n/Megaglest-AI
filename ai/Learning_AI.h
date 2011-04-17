@@ -23,7 +23,7 @@
 #include "leak_dumper.h"
 #include "unit_type.h"
 
-namespace Glest{ namespace Game{
+	namespace Glest{ namespace Game{
 
 class AiInterface;
 
@@ -174,6 +174,12 @@ public:
 
 };
 
+class QObject
+{
+public:
+	int state, action;
+	bool actionSucceeded;
+};
 
 class LearningAI
 {
@@ -185,7 +191,7 @@ class LearningAI
 	static const int maxWarriors =  15;
 	static const int maxBuildings = 5;
 	static const int maxResource = 10000;
-
+	
 	int startLoc;
 	int GameNumber;
 
@@ -197,9 +203,15 @@ class LearningAI
 	double stateProbabs[NUM_OF_STATES];
 	double actionsProbabs[NUM_OF_ACTIONS]; // Probability of choosing an action
 	double qValues[NUM_OF_STATES][NUM_OF_ACTIONS];
+	float immediateReward[NUM_OF_STATES][NUM_OF_ACTIONS];
 	RandomGen random;
 	Actions  *action;
 	int interval;
+	int delayInterval;
+
+	vector<QObject> state_action_list;
+	int qLength;
+
 public:
 	~LearningAI();
 	void printQvalues();
@@ -208,6 +220,7 @@ public:
 	void battleEnd();
 	Snapshot* takeSnapshot();
 	void init_qvalues();
+	void initImmediateRewards();
 	double best_qvalue(int &state, int &best_action);	
 	void update_qvalues(int olds,int news,int action,double r);
 	int  semi_uniform_choose_action  (int & state);	
@@ -215,7 +228,9 @@ public:
 	void  getStateProbabilityDistribution(Snapshot * currSnapshot);
 	void getActionProbabilityDistribution(Snapshot *currSnapshot);
 	void normalizeProbabilities(double values[] , int length);
+	float getImmediateReward(int state, int action, bool actionSucceed);
 	float getReward(Snapshot* preSnapshot, Snapshot* newSnapshot, bool actionSucceed);
+	void back_update_qvalues( double reward);
 
 private:
 	void updateLoop();
