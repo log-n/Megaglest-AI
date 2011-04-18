@@ -37,6 +37,7 @@ Snapshot::Snapshot(AiInterface * aiInterface , FILE * logs)
 	CheckIfStableBase();
 	countDamagedUnits( );
 	getKills();
+	setNumOfDeaths();
 	noOfWorkers = getCountOfClass(ucWorker);
 	noOfWarriors = getCountOfClass(ucWarrior);
 	noOfBuildings = getCountOfClass(ucBuilding);
@@ -59,13 +60,14 @@ Snapshot &Snapshot::operator =( const Snapshot &s ) {
     }
     upgradeCount = s.upgradeCount;
     noOfKills = s.noOfKills;
+    noOfDeaths = s.noOfDeaths;
 
     return *this;
 }
 
-int Snapshot::getKills()
+void Snapshot::getKills()
 {
-    int count = 0 ;
+   /* int count = 0 ;
 	for(int i=0; i<aiInterface->getMyUnitCount(); ++i)
 	{
 		const Unit *u= aiInterface->getMyUnit(i);
@@ -74,9 +76,14 @@ int Snapshot::getKills()
 	noOfKills  = count;
 	fprintf(logs," No of kills : %d \n", noOfKills);
 	fflush(logs);
-	return count ;
+	return count ;*/
+	noOfKills = aiInterface->getKills();
 }
 
+void Snapshot :: setNumOfDeaths()
+{
+	noOfDeaths = aiInterface->getDeaths();
+}
 
 bool Snapshot::CheckIfBeingAttacked(Vec2i &pos, Field &field)
 {

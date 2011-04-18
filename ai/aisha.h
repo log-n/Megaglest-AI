@@ -23,6 +23,7 @@ enum AutoStates
 
 
 
+
 namespace Glest{ namespace Game{
 
 class AiInterface;
@@ -43,6 +44,8 @@ public:
 	void init(AiInterface *aiInterface,int useStartLocation=-1);
 	void update();
 	void battleEnd();
+
+private:
 
 };
 

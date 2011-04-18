@@ -12,5 +12,4 @@ void AIsha::init(AiInterface *aiInterface,int useStartLocation){};
 void AIsha::update(){};
 void AIsha::battleEnd(){};
 
-
 }}

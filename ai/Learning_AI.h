@@ -98,7 +98,7 @@ class Snapshot
 {
 private:
     static const int baseRadius= 25;
-    static const int minWarriors = 10;
+    static const int minWarriors = 25;
 
 public:
 	FILE * logs;
@@ -112,6 +112,7 @@ public:
 	int resourcesAmount[NUM_OF_RESOURCES] ;
     int upgradeCount;
 	int noOfKills;
+	int noOfDeaths;
     /*
     int noOfDefensiveBuildings;
     int noOfWarriorProducerBuildings;
@@ -121,7 +122,7 @@ public:
     Snapshot &operator = ( const Snapshot &s );
 
 private:
-    int getKills();
+    void getKills();
 	int getUpgradeCount();
 	bool CheckIfBeingAttacked(Vec2i &pos, Field &field);
 	bool CheckIfStableBase();
@@ -130,6 +131,7 @@ private:
 	int getCountOfClass(UnitClass uc);
 	float getRatioOfClass(UnitClass uc);
 	void  getResourceStatus();
+	void setNumOfDeaths();
 	//int  getCountOfDefensiveBuildings();
 };
 
@@ -154,8 +156,13 @@ private:
 	bool findPosForBuilding(const UnitType* building, const Vec2i &searchPos, Vec2i &outPos);
 	bool CheckAttackPosition(Vec2i &pos, Field &field, int radius);
 	const UnitType* getFarm();
+	void saveResourceAmount(int resourcesAmount[NUM_OF_RESOURCES]);
+	bool switchAction(int actionNumber);
 
 public:
+	int resourceSpent[NUM_OF_RESOURCES];
+	void clearResourceSpent();
+	void UpdateSpentResource(const ProducibleType *pt);
 
 //ACTIONS
 	Actions(AiInterface * aiInterface, int startLoc, FILE * logs);
@@ -186,12 +193,9 @@ class LearningAI
 	AiInterface *aiInterface;
 	FILE * logs;
 	bool probSelect;
+	int resourceExtra[NUM_OF_RESOURCES];
+	int isAllowed[NUM_OF_STATES][NUM_OF_ACTIONS];
 
-	static const int maxWorkers = 10;
-	static const int maxWarriors =  15;
-	static const int maxBuildings = 5;
-	static const int maxResource = 10000;
-	
 	int startLoc;
 	int GameNumber;
 
@@ -200,7 +204,10 @@ class LearningAI
 	int lastState;
 	int lastAct;
 	double featureWeights[NUM_OF_FEATURES];
+
 	double stateProbabs[NUM_OF_STATES];
+	double sumStateProbabs[NUM_OF_STATES];
+
 	double actionsProbabs[NUM_OF_ACTIONS]; // Probability of choosing an action
 	double qValues[NUM_OF_STATES][NUM_OF_ACTIONS];
 	float immediateReward[NUM_OF_STATES][NUM_OF_ACTIONS];
@@ -211,6 +218,8 @@ class LearningAI
 
 	vector<QObject> state_action_list;
 	int qLength;
+	bool isBeingAttackedIntm;
+	int lastAttackFrame;
 
 public:
 	~LearningAI();
@@ -238,6 +247,11 @@ private:
 	int choose_probable_action  ();
 	void  update_probable_qvalues(int action, double reward);
 	int choose_one_on_prob(double arr[], int size);
+
+	void back_update_reward(Snapshot* lastSnapshot, Snapshot* newSnapshot);
+	void back_update_qvalues(double reward, int action);
+
+	void saveStateProbDistribution();
 };
 }}
 

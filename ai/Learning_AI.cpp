@@ -10,15 +10,33 @@
 
 #define EXPLORATION_THRESHOLD 0.1
 
-#define BETA 0.04
+#define BETA 0.001
+#define ALPHA 0.005
 #define  GAMMA 0.05
+#define DELTA 0.01
+#define MAX_Q_LEN 100
 
 namespace Glest { namespace Game {
+
+static const int maxWorkers = 30;
+static const int maxWarriors =  45;
+static const int maxBuildings = 10;
+static const int maxResource = 10000;
 
 void LearningAI::init(AiInterface *aiInterface, int useStartLocation) 
 {
 	random.init(time(NULL));
 	probSelect = false;
+	isBeingAttackedIntm = false;
+	lastAttackFrame = 0;
+
+	resourceExtra[gold] = 200;
+	resourceExtra[wood] = 150;
+	resourceExtra[stone] = 120;
+	resourceExtra[food] = 20;
+	resourceExtra[energy] = 0;
+	resourceExtra[housing]= 0;
+
 	logs = fopen("learning_ai_log_file.txt", "w+");
 	this->aiInterface= aiInterface;
 	if(useStartLocation == -1) 
@@ -35,6 +53,7 @@ void LearningAI::init(AiInterface *aiInterface, int useStartLocation)
 	initImmediateRewards();
 	lastSnapshot = takeSnapshot();
 	getStateProbabilityDistribution(lastSnapshot);
+	saveStateProbDistribution();
 
 	if(probSelect)
 	{
@@ -48,7 +67,7 @@ void LearningAI::init(AiInterface *aiInterface, int useStartLocation)
 	lastActionSucceed = action->selectAction(lastAct);
 	//best_qvalue(int &state, int &best_action);
 
-	interval = 50;
+	interval = 25;
 	delayInterval = 5000;
 	qLength = 0 ;
 
@@ -69,6 +88,15 @@ void LearningAI::printQvalues()
 
 void LearningAI::update()
 {
+	int count= 0;
+	for(int i=0; i<aiInterface->getMyUnitCount(); ++i){
+		if(aiInterface->getMyUnit(i)->getType()->isOfClass(ucBuilding) && aiInterface->getMyUnit(i)->getType()->getMaxHp() > 6000){
+			++count;
+		}
+	}
+	if(count == 0){
+		return;
+	}
 		Snapshot * newSnapshot;
 		if((aiInterface->getTimer() % (interval * GameConstants::updateFps / 1000)) == 0)
 		{
@@ -82,55 +110,115 @@ void LearningAI::update()
 			//free(lastSnapshot);
 			//lastSnapshot = newSnapshot;
 			getStateProbabilityDistribution(newSnapshot);
+			saveStateProbDistribution();
 
 			// push into queue
 			QObject next ;
 			next.action = lastAct;
 			next.state = lastState;
 			next.actionSucceeded = lastActionSucceed;
-			state_action_list.push_back(next);
-			qLength ++;
+			if(next.actionSucceeded){
+				state_action_list.push_back(next);
+				qLength ++;
+			}
 
-			int newAct;
-
-			if(probSelect)
+			int iteration = 0;
+			while(iteration < 10)
 			{
-				newAct = choose_probable_action();
-				if(lastActionSucceed){
-					update_probable_qvalues(lastAct, reward);
+
+				int newAct;
+
+				if(probSelect)
+				{
+					newAct = choose_probable_action();
+					if(lastActionSucceed){
+						update_probable_qvalues(lastAct, reward);
+					}
 				}
-			}
-			else
-			{
-				int newState ;
-				newAct =semi_uniform_choose_action  (newState);
-				fprintf(logs, "after semi_uniform_choose_action\n");
-				fflush(logs);
-				update_qvalues(lastState, newState,lastAct,reward);
-				fprintf(logs, "after update qvals\n");
-				fflush(logs);
-				lastState = newState;
-			}
+				else
+				{
+					int newState ;
+					newAct =semi_uniform_choose_action  (newState);
+					fprintf(logs, "after semi_uniform_choose_action\n");
+					fflush(logs);
+					//update_qvalues(lastState, newState,lastAct,reward);
+					fprintf(logs, "after update qvals\n");
+					fflush(logs);
+					lastState = newState;
+				}
 
-			lastActionSucceed  = action->selectAction(newAct);
-			fprintf(logs, "after selectAction\n");
-			fflush(logs);
+				lastActionSucceed  = action->selectAction(newAct);
+				fprintf(logs, "after selectAction\n");
+				fflush(logs);
 
-			lastAct = newAct;
-			aiInterface->printLog(4, " state :  " + intToStr( lastState )+ " Action : " + intToStr( lastAct )+"\n");
-			fprintf(logs," state  :  %d action : %d \n",  lastState, lastAct);
-			fprintf(logs," out of update ...\n");
-			fflush(logs);
+				lastAct = newAct;
+				aiInterface->printLog(4, " state :  " + intToStr( lastState )+ " Action : " + intToStr( lastAct )+"\n");
+				fprintf(logs," state  :  %d action : %d \n",  lastState, lastAct);
+				fprintf(logs," out of update ...\n");
+				fflush(logs);
+
+				if(lastActionSucceed){
+					break;
+				}
+				iteration++;
+			}
 		}
 
-		if(qLength !=0 && qLength%100 == 0)
+		if(qLength !=0 && qLength%MAX_Q_LEN == 0)
 		{
 			
-			float reward = getReward(lastSnapshot, newSnapshot,  lastActionSucceed)	 ;	
-			back_update_qvalues(reward);
+			//float reward = getReward(lastSnapshot, newSnapshot,  lastActionSucceed)	 ;
+			//back_update_qvalues(reward);
+			back_update_reward(lastSnapshot, newSnapshot);
 			free(lastSnapshot);
-			lastSnapshot = newSnapshot;			
+			lastSnapshot = newSnapshot;
+			lastAttackFrame = newSnapshot->beingAttacked ? 1 : 0;
+			isBeingAttackedIntm = newSnapshot->beingAttacked;
 		}
+}
+
+void LearningAI::back_update_qvalues(double reward, int action)
+{
+	if(reward < 0){
+		reward = 0;
+	}
+	reward = reward * qLength/MAX_Q_LEN;
+
+	double rewardStateRatio [NUM_OF_STATES];
+	bool isPositive = false;
+	for(int s=0; s< NUM_OF_STATES; s++)
+	{
+		if(qValues[s][action] > 0 && isAllowed[s][action]){
+			rewardStateRatio[s] = sumStateProbabs[s];
+			isPositive = true;
+		}
+		else{
+			rewardStateRatio[s] = 0;
+		}
+	}
+	if(isPositive == false){
+		return;
+	}
+	normalizeProbabilities(rewardStateRatio, NUM_OF_STATES);
+
+	for(int s=0; s< NUM_OF_STATES; s++)
+	{
+		if(isAllowed[s][action]){
+		qValues[s][action] = (1-ALPHA)*qValues[s][action] + ALPHA*reward* rewardStateRatio[s];
+		}
+	}
+
+	/*for(int i = qLength-1 ; i >= 0 ; i--)
+	{
+		QObject obj = state_action_list.at(i);
+		if(obj.actionSucceeded && obj.action == action)
+		{
+			double qval = qValues[obj.state][obj.action]	;
+
+			qValues[obj.state][obj.action] =   (1 - ALPHA)*qval + ALPHA*(reward);
+		}
+		reward -= DELTA*reward;
+	}*/
 }
 
 void LearningAI :: back_update_qvalues(double reward)
@@ -141,12 +229,14 @@ void LearningAI :: back_update_qvalues(double reward)
 	{
 		QObject newS = state_action_list.at(i+1);
 		QObject oldS = state_action_list.at(i);
-		qval = qValues[oldS.state][oldS.action]	;
-		new_qval=qValues[newS.state][newS.action]	;
+		if(oldS.actionSucceeded){
+			qval = qValues[oldS.state][oldS.action]	;
+			new_qval=qValues[newS.state][newS.action]	;
 
-		qValues[oldS.state][oldS.action] =   (1 - BETA)*qval + BETA*(reward  + GAMMA*new_qval); 
+			qValues[oldS.state][oldS.action] =   (1 - ALPHA)*qval + ALPHA*(reward  + GAMMA*new_qval);
 
-		reward = GAMMA*reward;
+			reward -= DELTA*reward;
+		}
 	}
 	state_action_list.clear();
 	qLength = 0;
@@ -156,8 +246,25 @@ void LearningAI :: back_update_qvalues(double reward)
 Snapshot* LearningAI :: takeSnapshot()
 {
 	Snapshot *s = new  Snapshot(aiInterface , logs);
+	if(s->beingAttacked && !lastAttackFrame){
+		this->lastAttackFrame = qLength;
+	}
+	if(!s->beingAttacked && lastAttackFrame){
+		lastAttackFrame = 0;
+	}
+	if(s->beingAttacked){
+		this->isBeingAttackedIntm = true;
+	}
 	aiInterface->printLog(4, "Out of take snapshot \n");
 	return s;
+}
+
+void LearningAI::saveStateProbDistribution()
+{
+	for(int i=0; i<NUM_OF_STATES; i++)
+	{
+		sumStateProbabs[i] += stateProbabs[i];
+	}
 }
 
 void LearningAI:: getStateProbabilityDistribution(Snapshot *currSnapshot)
@@ -243,11 +350,11 @@ void LearningAI::getActionProbabilityDistribution(Snapshot *currSnapshot)
 void  LearningAI:: assignFeatureWeights()
 {
 	 //beingAttacked 
-	featureWeights[featureBeingAttacked ] =  500;
+	featureWeights[featureBeingAttacked ] =  300;
     //readyForAttack
 	featureWeights[featureReadyForAttack]  = 70 ;
 	//damagedUnitCount 
-	featureWeights[featureDamagedUnitCount 	]  = 3 ;
+	featureWeights[featureDamagedUnitCount 	]  = 2 ;
     //noOfWorkers;    
 	featureWeights[featureNoOfWorkers]  = 10 ;
 	//noOfWarriors;
@@ -255,7 +362,7 @@ void  LearningAI:: assignFeatureWeights()
     //noOfBuildings ;     
 	featureWeights[featureNoOfBuildings ]  = 13 ;
 	//upgradeCount;
-	featureWeights[featureUpgradeCount]  = 5 ;
+	featureWeights[featureUpgradeCount]  = 3 ;
 	//resourcesAmounts weights 
 	//resource_name == "gold" 
 	featureWeights[featureRsourcesAmountGold]  = 20 ;
@@ -269,22 +376,73 @@ void  LearningAI:: assignFeatureWeights()
 	featureWeights[featureRsourcesAmountEnergy]  = 10 ;
 	//resource_name == "housing"  
 	featureWeights[featureRsourcesAmountHousing]  = 10 ;
+
+
+	for (int s=0;s< NUM_OF_STATES;s++)
+	{
+		for (int a=0;a< NUM_OF_ACTIONS ;a++)
+		{
+				isAllowed[s][a] =0;
+		}
+	}
+	 // Assign reward 1 to actions supported by each state
+	  //stateGatherResource
+	  	isAllowed[stateGatherResource][actHarvestGold] = 1;
+	  	isAllowed[stateGatherResource][actHarvestWood] = 1;
+	  	isAllowed[stateGatherResource][actHarvestStone] = 1;
+	  	isAllowed[stateGatherResource][actHarvestFood] = 1;
+	  	isAllowed[stateGatherResource][actHarvestEnergy] = 1;
+	  	isAllowed[stateGatherResource][actHarvestHousing] = 1;
+	  	isAllowed[stateGatherResource][actProduceWorker] = 1;
+
+		//stateProduceUnit
+	  	isAllowed[stateProduceUnit][actProduceWorker] = 1;
+	  	isAllowed[stateProduceUnit][actProduceWarrior] = 1;
+	  	isAllowed[stateProduceUnit][actBuildDefensiveBuilding] = 1;
+	  	isAllowed[stateProduceUnit][actBuildWarriorProducerBuilding] = 1;
+	  	isAllowed[stateProduceUnit][actBuildResourceProducerBuilding] = 1;
+	  	isAllowed[stateProduceUnit][actBuildFarm] = 1;
+
+		//stateRepair
+	  	isAllowed[stateRepair][actRepairDamagedUnit] = 1;
+
+		//stateUpgrade
+	  	isAllowed[stateUpgrade][actUpgrade] = 1;
+
+		//stateAttack
+	  	isAllowed[stateAttack][actSendScoutPatrol] = 1;
+	  	isAllowed[stateAttack][actAttack] = 1;
+	  	isAllowed[stateAttack][actProduceWarrior] = 1;
+	  	isAllowed[stateAttack][actBuildWarriorProducerBuilding] = 1;
+
+
+		//stateDefend
+	  	isAllowed[stateDefend][actDefend]= 1;
+	  	isAllowed[stateDefend][actProduceWarrior] = 1;
+	  	isAllowed[stateDefend][actBuildDefensiveBuilding] = 1;
+	  	isAllowed[stateDefend][actBuildWarriorProducerBuilding] = 1;
+	  // For actions that r not supported in a state we need to give -INT_MAX q value so that those r never chosen..
 }
 
 LearningAI :: ~LearningAI(){
-	printQvalues();
+//	printQvalues();
 //battleEnd();
 }
 
 void LearningAI :: battleEnd()
 {
+	back_update_reward(lastSnapshot, takeSnapshot());
+
 	FILE *  fp = fopen("Q_values.txt" , "w");
 	fprintf(fp, "%d\n", GameNumber);
 	for(int i = 0 ; i < NUM_OF_STATES ; i++)
 	{
 		for(int j = 0 ; j < NUM_OF_ACTIONS; j++)
 		{
-			fprintf(fp, "%lf\n ", qValues[i][j]);
+			if(j% 4 == 0){
+				fprintf(fp, "\n");
+			}
+			fprintf(fp, "%lf\t", qValues[i][j]);
 		}
 	}
 	fclose(fp);
@@ -297,7 +455,6 @@ void  LearningAI ::  initImmediateRewards()
 		{
 			fprintf(logs, "Reward values read from file..\n");
 			rewind (fp);			
-			GameNumber++;
 			for(int i = 0 ; i < NUM_OF_STATES ; i++)
 			{
 				for(int j = 0 ; j < NUM_OF_ACTIONS; j++)
@@ -347,11 +504,16 @@ void  LearningAI ::  initImmediateRewards()
 	immediateReward[stateUpgrade][actUpgrade] = 2;
 
 	//stateAttack
-	immediateReward[stateAttack][actSendScoutPatrol] = 3;
+	immediateReward[stateAttack][actSendScoutPatrol] = 1;
 	immediateReward[stateAttack][actAttack] = 5;
+	immediateReward[stateDefend][actProduceWarrior] = 1;
+	immediateReward[stateDefend][actBuildWarriorProducerBuilding] = 1;
 
 	//stateDefend
-	immediateReward[stateDefend][actDefend]= 5;
+	immediateReward[stateDefend][actDefend]= 4;
+	immediateReward[stateDefend][actProduceWarrior] = 4;
+	immediateReward[stateDefend][actBuildDefensiveBuilding] = .5;
+	immediateReward[stateDefend][actBuildWarriorProducerBuilding] = .5;
 
 	fp = fopen("ImmediateRewards.txt" , "w");
 		for(int i = 0 ; i < NUM_OF_STATES ; i++)
@@ -431,9 +593,15 @@ void LearningAI ::  init_qvalues()
 	//stateAttack
 	qValues[stateAttack][actSendScoutPatrol] = 1;
 	qValues[stateAttack][actAttack] = 1;
+	qValues[stateAttack][actProduceWarrior] = 1;
+	qValues[stateAttack][actBuildWarriorProducerBuilding] = 1;
+
 
 	//stateDefend
 	qValues[stateDefend][actDefend]= 1;
+	qValues[stateDefend][actProduceWarrior] = 1;
+	qValues[stateDefend][actBuildDefensiveBuilding] = 1;
+	qValues[stateDefend][actBuildWarriorProducerBuilding] = 1;
   // For actions that r not supported in a state we need to give -INT_MAX q value so that those r never chosen..	
 }
 
@@ -514,7 +682,7 @@ int LearningAI:: choose_one_on_prob(double arr[], int size)
 
 	normalizeProbabilities(arr, size);
 
-	  float zero = 0.0, one = 1.0;
+	  float zero = 0.0, one = 0.9999999999999;
 	  float selection = random.randRange(zero, one);
 
 	  int index = 0;
@@ -654,7 +822,7 @@ int LearningAI ::  choose_probable_action  ()
 #define MAX_BUILDINGS 30
 #define MIN_RESOURCE 1000
 #define MAX_RESOURCE 10000
-#define ACTION_FAILED_PENALTY -1
+#define ACTION_FAILED_PENALTY 0
 
 float LearningAI :: getImmediateReward(int state, int action, bool actionSucceeded)
 {
@@ -670,6 +838,76 @@ float LearningAI :: getImmediateReward(int state, int action, bool actionSucceed
 	return reward;
 }
 
+#define RESOURCE_REWARD 0.01
+#define RESOURCE_WORKER_CONNECT 1
+#define MILITARY_EXTRA 30
+#define MILITARY_REWARD 0.55
+#define MILITARY_PRODUCTION_RATIO 4
+#define ATTACK_FAST_INCENTIVE MILITARY_REWARD*5
+#define ATTACK_INCENTIVE MILITARY_REWARD*10
+#define SCOUT_RATIO 20
+#define DEFENCE_INCENTIVE MILITARY_REWARD*5
+#define DEFEND_FAST_INCENTIVE  MILITARY_REWARD*2.5
+#define DEFEND_BUILDING_RATIO  8
+
+void LearningAI::back_update_reward(Snapshot* lastSnapshot, Snapshot* newSnapshot)
+{
+	double produceWorkerReward = 0;
+	for( int i = 0; i < NUM_OF_RESOURCES; i++ )
+	{
+		int resourceDelta = (newSnapshot->resourcesAmount[i] - lastSnapshot->resourcesAmount[i])/10;
+		int resourceSpent = action->resourceSpent[i];
+		int resourceProduced = resourceDelta + resourceSpent;
+		if(resourceProduced < 0){
+			resourceProduced = 0;
+		}
+		double reward = (((double)resourceSpent - (double)resourceProduced) + resourceExtra[i]) * RESOURCE_REWARD;
+		produceWorkerReward += reward * RESOURCE_WORKER_CONNECT;
+		back_update_qvalues(reward, i);
+	}
+	action->clearResourceSpent();
+
+	//For worker
+	back_update_qvalues(produceWorkerReward, actProduceWorker);
+
+	double military_reward = (lastSnapshot->noOfWarriors - newSnapshot->noOfWarriors + MILITARY_EXTRA)* MILITARY_REWARD;
+
+	if(!lastSnapshot->beingAttacked && !isBeingAttackedIntm && !newSnapshot->readyForAttack){
+		military_reward += ATTACK_FAST_INCENTIVE;
+	}
+
+	back_update_qvalues(military_reward, actProduceWarrior);
+	back_update_qvalues(military_reward / MILITARY_PRODUCTION_RATIO, actBuildWarriorProducerBuilding);
+
+	double defend_incentive = isBeingAttackedIntm ? DEFENCE_INCENTIVE : 0;
+
+	if(newSnapshot->beingAttacked){
+
+		defend_incentive += DEFEND_FAST_INCENTIVE * lastAttackFrame/MAX_Q_LEN;
+	}
+
+	back_update_qvalues(defend_incentive, actDefend);
+	back_update_qvalues(defend_incentive/DEFEND_BUILDING_RATIO, actBuildDefensiveBuilding);
+
+
+	double attact_incentive = newSnapshot->readyForAttack ? ATTACK_INCENTIVE : 0;
+	back_update_qvalues(attact_incentive, actAttack);
+	back_update_qvalues(attact_incentive/SCOUT_RATIO, actSendScoutPatrol);
+
+
+
+	back_update_qvalues(0.0, actRepairDamagedUnit);
+	back_update_qvalues(0.0, actUpgrade);
+	back_update_qvalues(0.0, actBuildResourceProducerBuilding);
+	back_update_qvalues(0.0, actBuildFarm);
+
+	//END
+	for(int s=0; s<NUM_OF_STATES; s++){
+		sumStateProbabs[s] = 0;
+	}
+	state_action_list.clear();
+	qLength = 0;
+}
 
 float LearningAI :: getReward(Snapshot* preSnapshot, Snapshot* newSnapshot, bool actionSucceed)
 {

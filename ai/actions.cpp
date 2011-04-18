@@ -5,6 +5,7 @@
 #include "unit_type.h"
 #include "unit.h"
 #include "leak_dumper.h"
+#include <cassert>
 
 namespace Glest { namespace Game {
 
@@ -13,6 +14,7 @@ Actions::Actions(AiInterface * aiInterface , int startLoc , FILE * logs)
 	this->logs = logs;
 	this->aiInterface = aiInterface;
 	this->startLoc = startLoc;
+	clearResourceSpent();
 }
 
 
@@ -21,6 +23,14 @@ bool Actions::selectAction(int actionNumber)
 	fprintf(logs, "Selected action : %d\n", actionNumber);
 	fflush(logs);
 
+	bool ret = switchAction(actionNumber);
+
+	return ret;
+}
+
+
+bool Actions:: switchAction(int actionNumber)
+{
 	switch(actionNumber)
 	{
 			case actSendScoutPatrol:
@@ -66,7 +76,8 @@ bool Actions::selectAction(int actionNumber)
 					break;
 
 			case actHarvestFood:
-					return harvest(food) ;
+					//return harvest(food) ;
+					return buildFarm();
 					break;
 
 			case actHarvestEnergy:
@@ -134,6 +145,57 @@ bool Actions::CheckAttackPosition(Vec2i &pos, Field &field, int radius)
     return false;
 }
 
+void Actions::UpdateSpentResource(const ProducibleType *pt)
+{
+	for(int i=0; i<pt->getCostCount(); ++i)
+	{
+		const ResourceType *rt= pt->getCost(i)->getType();
+		int cost= pt->getCost(i)->getAmount();
+		const Resource *r= aiInterface->getResource(rt);
+		string resource_name = rt->getName ();
+
+		if(cost < 0){
+			cost *= -1;
+		}
+
+		if(resource_name == "gold" )
+		{
+			resourceSpent[gold] += cost ;
+		}
+		else if(resource_name == "wood"  )
+		{
+			resourceSpent[wood] += cost ;
+		}
+		else if(resource_name == "stone"  )
+		{
+			resourceSpent[stone] += cost ;
+		}
+		else if(resource_name == "food"  )
+		{
+			resourceSpent[food] += cost ;
+		}
+		else if(resource_name == "energy"  )
+		{
+			resourceSpent[energy] += cost ;
+		}
+		else if(resource_name == "housing"  )
+		{
+			resourceSpent[housing] += cost ;
+		}
+
+		if(cost < 0)
+		{
+			printf("Negative resource value ");
+		}
+	}
+
+	for(int i=0; i< NUM_OF_RESOURCES; i++)
+	{
+		if(resourceSpent[i] > 0)
+			printf("\t\t\t\t\t\t%d\t%d\n", i, resourceSpent[i]);
+	}
+}
+
 bool Actions::canProduceUnit(const UnitType *ut)
 {
 	if(aiInterface->reqsOk(ut))
@@ -184,10 +246,12 @@ bool Actions::sendScoutPatrol()
 		if(flag == false)
 			return flag ;
 		SystemFlags::OutputDebug(SystemFlags::debugSystem,"In [%s::%s Line: %d]\n",__FILE__,__FUNCTION__,__LINE__);
-		aiInterface->giveCommand(unit, ccAttack, pos);
-		aiInterface->printLog(2, "Scout patrol sent to: " + intToStr(pos.x)+","+intToStr(pos.y)+"\n");
-		fprintf(logs, "Scout patrol sent to: %d , %d\n " ,pos.x, pos.y);
-		return true;
+		CommandResult result = aiInterface->giveCommand(unit, ccAttack, pos);
+		if(result == crSuccess){
+			aiInterface->printLog(2, "Scout patrol sent to: " + intToStr(pos.x)+","+intToStr(pos.y)+"\n");
+			fprintf(logs, "Scout patrol sent to: %d , %d\n " ,pos.x, pos.y);
+		}
+		return false;
 }
 
 
@@ -226,7 +290,7 @@ bool Actions::massiveAttack(const Vec2i &pos, Field field)
 
 bool Actions::returnBase(int unitIndex) {
     Vec2i pos;
-    CommandResult r;
+    CommandResult result;
     int fi;
 
     fi= aiInterface->getFactionIndex();
@@ -234,7 +298,8 @@ bool Actions::returnBase(int unitIndex) {
 		 aiInterface->getHomeLocation();
 
     SystemFlags::OutputDebug(SystemFlags::debugSystem,"In [%s::%s Line: %d]\n",__FILE__,__FUNCTION__,__LINE__);
-    r= aiInterface->giveCommand(unitIndex, ccMove, pos);
+    result= aiInterface->giveCommand(unitIndex, ccMove, pos);
+
 	return true;
 //    aiInterface->printLog(1, "Order return to base pos:" + intToStr(pos.x)+", "+intToStr(pos.y)+": "+rrToStr(r)+"\n");
 }
@@ -268,7 +333,13 @@ bool Actions::harvest(int resourceNumber)
 		if(hct != NULL && aiInterface->getNearestSightedResource(rt, aiInterface->getHomeLocation(), resPos, false))
 		{
 			resPos= resPos+Vec2i(random.randRange(-2, 2), random.randRange(-2, 2));
-			aiInterface->giveCommand(unitIndex, hct, resPos);
+			CommandResult result = aiInterface->giveCommand(unitIndex, hct, resPos);
+
+			if(result == crSuccess){
+				//assert(false);
+				return true;
+			}
+
 			fprintf(logs, "Command sent to AI for harvest \n");
 			fflush(logs);
 //			aiInterface->printLog(4, "Order harvest pos:" + intToStr(resPos.x)+", "+intToStr(resPos.y)+": "+rrToStr(r)+"\n");
@@ -284,8 +355,6 @@ bool Actions::harvest(int resourceNumber)
 
 bool Actions::repairDamagedUnit()
 {
-    bool flag = false;
-
     //find a repairer and issue command
     for(int i=0; i<aiInterface->getMyUnitCount(); ++i)
     {
@@ -297,16 +366,18 @@ bool Actions::repairDamagedUnit()
 				{
 						if(rct->isRepairableUnitType(u->getType()))
 						{
-	    						aiInterface->giveCommand(i, rct, u->getPos());
+	    						CommandResult result = aiInterface->giveCommand(i, rct, u->getPos());
 								//aiInterface->printLog(3, "Repairing order issued");
 								fprintf(logs, "Command sent to AI for repair \n");
-
-								flag = true;
+								if(result == crSuccess){
+									return true;
+									//TODO ... add cost
+								}
 						}
 				}
 		}
 	}
-	return flag;
+	return false;
 }
 
 
@@ -330,12 +401,16 @@ bool Actions::produceOneUnit(UnitClass unitClass)
 				//if the unit is from the right class
 				if(producedUnit->isOfClass(unitClass))
 				{
-					if(aiInterface->reqsOk(ct) && aiInterface->reqsOk(producedUnit))
+					if(aiInterface->reqsOk(ct) && aiInterface->reqsOk(producedUnit) && aiInterface->checkCosts(producedUnit))
 					{
-						aiInterface->giveCommand(i, ct);
+						CommandResult result = aiInterface->giveCommand(i, ct);
+
 						fprintf(logs, "Command sent to AI for produce unit \n");
 
-						return true;
+						if(result == crSuccess){
+							UpdateSpentResource(producedUnit);
+							return true;
+						}
 					}
 				}
 			}
@@ -346,7 +421,6 @@ bool Actions::produceOneUnit(UnitClass unitClass)
 
 bool Actions::upgrade()
 {
-	  bool flag = false;
 	  int cnt = 0;
 		//for each unit
 		for(int i=0; i<aiInterface->getMyUnitCount(); ++i)
@@ -368,8 +442,11 @@ bool Actions::upgrade()
 					if(aiInterface->reqsOk(uct))
 					{
 							SystemFlags::OutputDebug(SystemFlags::debugSystem,"In [%s::%s Line: %d]\n",__FILE__,__FUNCTION__,__LINE__);
-							aiInterface->giveCommand(i, uct);
-							flag = true;
+							CommandResult result = aiInterface->giveCommand(i, uct);
+							if(result == crSuccess){
+								UpdateSpentResource(producedUpgrade);
+								return true;
+							}
 					}
 					else
 					{
@@ -381,7 +458,7 @@ bool Actions::upgrade()
 			fprintf(logs, "No unit for upgrade available... !\n");
 		}
 		
-		return flag;
+		return false;
 }
 
 bool Actions::findPosForBuilding(const UnitType* building, const Vec2i &searchPos, Vec2i &outPos){
@@ -448,10 +525,13 @@ bool Actions::buildDefensiveBuilding()
 									Vec2i searchPos= getRandomHomePosition() +  aiInterface->getHomeLocation();
 			    					if(findPosForBuilding(building, searchPos, pos))
 									{
-										aiInterface->giveCommand(i, bct, pos,building);
-										fprintf(logs, "Command sent to AI for build defensive building \n");
+										CommandResult result = aiInterface->giveCommand(i, bct, pos,building);
 
-										return true;
+										if(result == crSuccess){
+											UpdateSpentResource(building);
+											fprintf(logs, "Command sent to AI for build defensive building \n");
+											return true;
+										}
 									}
 
 								}
@@ -495,10 +575,12 @@ bool Actions::buildDefensiveBuilding()
 									Vec2i searchPos= getRandomHomePosition() +  aiInterface->getHomeLocation();
 			    					if(findPosForBuilding(building, searchPos, pos))
 									{
-										aiInterface->giveCommand(i, bct, pos,building);
-										fprintf(logs, "Command sent to AI for build defensive building \n");
-
-										return true;
+										CommandResult result = aiInterface->giveCommand(i, bct, pos,building);
+										if(result == crSuccess){
+											UpdateSpentResource(building);
+											fprintf(logs, "Command sent to AI for build defensive building \n");
+											return true;
+										}
 									}
 
 								}
@@ -569,10 +651,12 @@ bool  Actions::buildWarriorProducerBuilding()
 									Vec2i searchPos= getRandomHomePosition() +  aiInterface->getHomeLocation();
 				    				if(findPosForBuilding(building, searchPos, pos))
 									{
-										aiInterface->giveCommand(i, bct, pos,building);
-										fprintf(logs, "Command sent to AI for warrior producer building \n");
-
-										return true;
+										CommandResult result = aiInterface->giveCommand(i, bct, pos,building);
+										if(result == crSuccess){
+											UpdateSpentResource(building);
+											fprintf(logs, "Command sent to AI for warrior producer building \n");
+											return true;
+										}
 									}
 								}
 							}
@@ -613,10 +697,12 @@ bool  Actions::buildWarriorProducerBuilding()
 									Vec2i searchPos= getRandomHomePosition() +  aiInterface->getHomeLocation();
 				    				if(findPosForBuilding(building, searchPos, pos))
 									{
-										aiInterface->giveCommand(i, bct, pos,building);
-										fprintf(logs, "Command sent to AI for warrior producer building \n");
-
-										return true;
+										CommandResult result = aiInterface->giveCommand(i, bct, pos,building);
+										if(result == crSuccess){
+											UpdateSpentResource(building);
+											fprintf(logs, "Command sent to AI for warrior producer building \n");
+											return true;
+										}
 									}
 								}
 							}
@@ -678,10 +764,12 @@ bool Actions::buildResourceProducerBuilding()
 								Vec2i searchPos= getRandomHomePosition() +  aiInterface->getHomeLocation();
 				    				if(findPosForBuilding(building, searchPos, pos))
 								{
-									aiInterface->giveCommand(i, bct, pos,building);
-									fprintf(logs, "Command sent to AI for Resource producer building \n");
-
-									return true;
+									CommandResult result =aiInterface->giveCommand(i, bct, pos,building);
+									if(result == crSuccess){
+										UpdateSpentResource(building);
+										fprintf(logs, "Command sent to AI for Resource producer building \n");
+										return true;
+									}
 								}
 
 							}
@@ -774,10 +862,13 @@ bool Actions::buildFarm()
 								Vec2i searchPos= getRandomHomePosition() +  aiInterface->getHomeLocation();
 				    				if(findPosForBuilding(building, searchPos, pos))
 								{
-									aiInterface->giveCommand(i, bct, pos,building);
-									fprintf(logs, "Command sent to AI for build farm \n");
+									CommandResult result = aiInterface->giveCommand(i, bct, pos,building);
 
-									return true;
+									if(result == crSuccess){
+										UpdateSpentResource(building);
+										fprintf(logs, "Command sent to AI for build farm \n");
+										return true;
+									}
 								}
 							}
 						}
@@ -793,6 +884,66 @@ bool Actions::buildFarm()
 		}
 	}
 	return false;
+}
+
+void Actions:: clearResourceSpent()
+{
+	for(int i = 0 ; i < NUM_OF_RESOURCES; i++)
+	{
+		resourceSpent[i] = 0;
+	}
+}
+
+void Actions:: saveResourceAmount(int resourcesAmount[NUM_OF_RESOURCES])
+{
+	for(int i = 0 ; i < NUM_OF_RESOURCES; i++)
+	{
+		resourcesAmount[i] = 0;
+	}
+
+    const TechTree *tt= aiInterface->getTechTree();
+	for(int unitIndex = 0 ; unitIndex < aiInterface->getMyUnitCount() ; unitIndex++ )
+	{
+		const Unit *unit = aiInterface->getMyUnit(unitIndex);
+
+		for(int i = 0; i < tt->getResourceTypeCount(); ++i)
+		{
+			const ResourceType *rt= tt->getResourceType(i);
+			const Resource *r= aiInterface->getResource(rt);
+			int amt = r->getAmount();
+			string resource_name = rt->getName ();
+			if(resource_name == "gold" )
+			{
+					resourcesAmount[gold] += amt ;
+			}
+			else if(resource_name == "wood"  )
+			{
+					resourcesAmount[wood] += amt ;
+			}
+			else if(resource_name == "stone"  )
+			{
+					resourcesAmount[stone] += amt ;
+			}
+			else if(resource_name == "food"  )
+			{
+					resourcesAmount[food] += amt ;
+			}
+			else if(resource_name == "energy"  )
+			{
+					resourcesAmount[energy] += amt ;
+			}
+			else if(resource_name == "housing"  )
+			{
+					resourcesAmount[housing] += amt ;
+			}
+		}
+	}
+
+	for(int i = 0 ; i < NUM_OF_RESOURCES; i++)
+	{
+			if(resourcesAmount[i] > 0)
+				printf("%d\t%d\n", i, resourcesAmount[i]);
+	}
 }
 
 }}

@@ -76,6 +76,8 @@ public:
     CommandResult giveCommand(Unit *unit, const CommandType *commandType, const Vec2i &pos);
 
     //get data
+    int getDeaths();
+    int getKills();
     const ControlType getControlType();
     int getMapMaxPlayers();
     Vec2i getHomeLocation();

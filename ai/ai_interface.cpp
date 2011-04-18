@@ -605,4 +605,15 @@ bool AiInterface::isFreeCells(const Vec2i &pos, int size, Field field){
     return world->getMap()->isFreeCells(pos, size, field);
 }
 
+int AiInterface::getDeaths()
+{
+	return world->getStats()->getDeaths(factionIndex);
+}
+
+int AiInterface::getKills()
+{
+	const Stats* stats = world->getStats();
+	return stats->getKills(factionIndex);
+}
+
 }}//end namespace
