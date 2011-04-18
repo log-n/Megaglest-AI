@@ -43,6 +43,8 @@ public:
 	virtual void mouseMove(int x, int y, const MouseState *ms);
 private:
 	bool isFinished();
+	void LogStats(FILE* log);
+	void SaveStats();
 };
 
 }}//end namespace

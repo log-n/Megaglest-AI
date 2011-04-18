@@ -25,6 +25,7 @@
 #include "auto_test.h"
 #include "game.h"
 #include "logger.h"
+#include "Learning_AI.h"
 
 #include "leak_dumper.h"
 
@@ -62,32 +63,166 @@ Automation::~Automation() {
 
 void Automation::update()
 {
-	if(!isFinished()){
-		Game *game = new Game(program, &gameSettings, true);
+	if(!isFinished())
+	{
+		try
+		{
+			Game *game = new Game(program, &gameSettings, true);
 
-		int X = 0;
-		int Y = 0;
-		SDL_GetMouseState(&X,&Y);
-		game->setStartXY(X,Y);
-		Logger::getInstance().setProgress(0);
-		Logger::getInstance().setState("");
-
-
-		SDL_PumpEvents();
-
-		showCursor(true);
-		SDL_PumpEvents();
-		sleep(0);
+			int X = 0;
+			int Y = 0;
+			SDL_GetMouseState(&X,&Y);
+			game->setStartXY(X,Y);
+			Logger::getInstance().setProgress(0);
+			Logger::getInstance().setState("");
 
 
-		game->load();
-		game->init();
+			SDL_PumpEvents();
 
-		this->render();
+			showCursor(true);
+			SDL_PumpEvents();
+			sleep(0);
 
-		this->stats = *(game->runFast());
-		count++;
-		delete game;
+
+			game->load();
+			game->init();
+
+			this->render();
+
+			this->stats = *(game->runFast());
+			count++;
+			SaveStats();
+			delete game;
+		}
+		catch(const exception &ex) {
+
+		}
+	}
+}
+
+void Automation::SaveStats()
+{
+	int exp_id = 0; int game_id = 0; int updateCount = 0;
+	string sqval ="";
+
+	FILE *  qval = fopen("Q_values.txt" , "r");
+	if(qval != NULL)
+	{
+		rewind (qval);
+		fscanf(qval, "%d", &exp_id);
+		fscanf(qval, "%d", &game_id);
+		fscanf(qval, "%d", &updateCount);
+
+		for(int i = 0 ; i < NUM_OF_STATES ; i++)
+		{
+			for(int j = 0 ; j < NUM_OF_ACTIONS; j++)
+			{
+				double value;
+				fscanf(qval, "%lE", &value);
+				const int strSize = 256;
+				char str[strSize]="";
+				snprintf(str, strSize-1, "%lE\t", value);
+				sqval +=  str;
+			}
+		}
+		fclose(qval);
+	}
+
+	string filename = "exp_" + intToStr(exp_id) + ".txt";
+	FILE *  log = fopen(filename.c_str() , "a");
+	if(log != NULL)
+	{
+		fprintf(log, "%d\t%d\t%d\n", exp_id, game_id, updateCount);
+
+		LogStats(log);
+
+		fprintf(log, "%s", sqval.c_str());
+		fprintf(log, "\n\n");
+		fclose(log);
+	}
+}
+
+void Automation::LogStats(FILE* log)
+{
+
+	for(int i=0; i<stats.getFactionCount(); ++i)
+	{
+		int team= stats.getTeam(i) + 1;
+		int kills= stats.getKills(i);
+		int deaths= stats.getDeaths(i);
+		int unitsProduced= stats.getUnitsProduced(i);
+		int resourcesHarvested= stats.getResourcesHarvested(i);
+
+		int score= kills*100 + unitsProduced*50 + resourcesHarvested/10;
+		string controlString;
+
+		if(stats.getPersonalityType(i) == fpt_Observer) {
+			controlString= GameConstants::OBSERVER_SLOTNAME;
+		}
+		else {
+			switch(stats.getControl(i)) {
+			case ctCpuEasy:
+				controlString= "CpuEasy";
+				break;
+			case ctCpu:
+				controlString= "Cpu";
+				break;
+			case ctCpuUltra:
+				controlString= "CpuUltra";
+				break;
+			case ctCpuMega:
+				controlString= "CpuMega";
+				break;
+			case ctNetwork:
+				controlString= ("Network");
+				break;
+			case ctHuman:
+				controlString= ("Human");
+				break;
+			case ctLearningAI:
+				controlString= "Learning_AI";
+				break;
+			case ctAIsha:
+				controlString= "AIsha";
+				break;
+
+			case ctNetworkCpuEasy:
+				controlString= ("NetworkCpuEasy");
+				break;
+			case ctNetworkCpu:
+				controlString= ("NetworkCpu");
+				break;
+			case ctNetworkCpuUltra:
+				controlString= ("NetworkCpuUltra");
+				break;
+			case ctNetworkCpuMega:
+				controlString= ("NetworkCpuMega");
+				break;
+
+			default:
+				assert(false);
+			};
+		}
+
+		if(stats.getControl(i)!=ctHuman && stats.getControl(i)!=ctNetwork ){
+			controlString+="_x_"+floatToStr(stats.getResourceMultiplier(i),1);
+		}
+
+		string victory= stats.getVictory(i)? ("Victory"): ("Defeat");
+		string faction = stats.getFactionTypeName(i);
+		string playerName = stats.getPlayerName(i);
+
+		fprintf(log, "%s\t", controlString.c_str());
+		fprintf(log, "%s\t", faction.c_str());
+		fprintf(log, "%s\t", victory.c_str());
+		fprintf(log, "%d\t", score);
+		fprintf(log, "%d\t", resourcesHarvested);
+		fprintf(log, "%d\t", unitsProduced);
+		fprintf(log, "%d\t", kills);
+		fprintf(log, "%d\t", deaths);
+		fprintf(log, "%d\t", team);
+		fprintf(log, "%s\t", playerName.c_str());
+		fprintf(log, "\n");
 	}
 }
 

@@ -187,14 +187,8 @@ void Actions::UpdateSpentResource(const ProducibleType *pt)
 
 		if(cost < 0)
 		{
-			printf("Negative resource value ");
+			//printf("Negative resource value ");
 		}
-	}
-
-	for(int i=0; i< NUM_OF_RESOURCES; i++)
-	{
-		if(resourceSpent[i] > 0)
-			printf("\t\t\t\t\t\t%d\t%d\n", i, resourceSpent[i]);
 	}
 }
 
@@ -947,12 +941,6 @@ void Actions:: saveResourceAmount(int resourcesAmount[NUM_OF_RESOURCES])
 					resourcesAmount[housing] += amt ;
 			}
 		}
-	}
-
-	for(int i = 0 ; i < NUM_OF_RESOURCES; i++)
-	{
-			if(resourcesAmount[i] > 0)
-				printf("%d\t%d\n", i, resourcesAmount[i]);
 	}
 }
 

@@ -6,12 +6,15 @@
 #include "leak_dumper.h"
 #include <time.h>
 #include <cassert>
+#include <math.h>
 
+
+#define EXPERIMENT_ID_DONT_CHANGE 1
 
 #define EXPLORATION_THRESHOLD 0.1
 
 #define BETA 0.001
-#define ALPHA 0.005
+#define ALPHA 0.001
 #define  GAMMA 0.05
 #define DELTA 0.01
 #define MAX_Q_LEN 100
@@ -25,6 +28,7 @@ static const int maxResource = 10000;
 
 void LearningAI::init(AiInterface *aiInterface, int useStartLocation) 
 {
+	updateCount = 0;
 	random.init(time(NULL));
 	probSelect = false;
 	isBeingAttackedIntm = false;
@@ -97,6 +101,7 @@ void LearningAI::update()
 	if(count == 0){
 		return;
 	}
+	updateCount++;
 		Snapshot * newSnapshot;
 	//	if((aiInterface->getTimer() % (interval * GameConstants::updateFps / 1000)) == 0)
 		{
@@ -179,6 +184,9 @@ void LearningAI::update()
 
 void LearningAI::back_update_qvalues(double reward, int action)
 {
+	if(qLength == 0){
+		return;
+	}
 	if(reward < 0){
 		reward = 0;
 	}
@@ -188,7 +196,7 @@ void LearningAI::back_update_qvalues(double reward, int action)
 	bool isPositive = false;
 	for(int s=0; s< NUM_OF_STATES; s++)
 	{
-		if(qValues[s][action] > 0 && isAllowed[s][action]){
+		if(qValues[s][action] > 0 && isAllowed[s][action] && sumStateProbabs[s]>0){
 			rewardStateRatio[s] = sumStateProbabs[s];
 			isPositive = true;
 		}
@@ -203,8 +211,13 @@ void LearningAI::back_update_qvalues(double reward, int action)
 
 	for(int s=0; s< NUM_OF_STATES; s++)
 	{
-		if(isAllowed[s][action]){
-		qValues[s][action] = (1-ALPHA)*qValues[s][action] + ALPHA*reward* rewardStateRatio[s];
+		if(isAllowed[s][action])
+		{
+			double newVal = (1-ALPHA)*qValues[s][action] + ALPHA*reward* rewardStateRatio[s];
+			if(!isnan(newVal))
+			{
+				qValues[s][action] = newVal;
+			}
 		}
 	}
 
@@ -434,7 +447,9 @@ void LearningAI :: battleEnd()
 	back_update_reward(lastSnapshot, takeSnapshot());
 
 	FILE *  fp = fopen("Q_values.txt" , "w");
+	fprintf(fp, "%d\n", EXPERIMENT_ID_DONT_CHANGE);
 	fprintf(fp, "%d\n", GameNumber);
+	fprintf(fp, "%d\n", updateCount);
 	for(int i = 0 ; i < NUM_OF_STATES ; i++)
 	{
 		for(int j = 0 ; j < NUM_OF_ACTIONS; j++)
@@ -442,7 +457,7 @@ void LearningAI :: battleEnd()
 			if(j% 4 == 0){
 				fprintf(fp, "\n");
 			}
-			fprintf(fp, "%lf\t", qValues[i][j]);
+			fprintf(fp, "%lE\t", qValues[i][j]);
 			fflush(fp);
 		}
 	}
@@ -462,9 +477,9 @@ void  LearningAI ::  initImmediateRewards()
 				{
 					double value;
 					//fscanf(fp, "%f\n", &qValues[i][j]);
-					fscanf(fp, "%lf", &value);
+					fscanf(fp, "%lE", &value);
 					immediateReward[i][j] = value;
-					fprintf(logs, "Reward value for state %d Action %d : %lf \n", i,j,qValues[i][j]);
+					fprintf(logs, "Reward value for state %d Action %d : %lE \n", i,j,qValues[i][j]);
 					fflush(logs);
 				}				
 			}
@@ -535,22 +550,30 @@ void LearningAI ::  init_qvalues()
 		{
 			fprintf(logs, "Q values read from file..\n");
 			rewind (fp);
-			fscanf(fp, "%d", &GameNumber);
-			GameNumber++;
-			for(int i = 0 ; i < NUM_OF_STATES ; i++)
+			int expId = 0;
+			fscanf(fp, "%d", &expId);
+			if(expId == EXPERIMENT_ID_DONT_CHANGE)
 			{
-				for(int j = 0 ; j < NUM_OF_ACTIONS; j++)
+				fscanf(fp, "%d", &GameNumber);
+				GameNumber++;
+				int timepass;
+				fscanf(fp, "%d", &timepass);
+				for(int i = 0 ; i < NUM_OF_STATES ; i++)
 				{
-					double value;
-					//fscanf(fp, "%f\n", &qValues[i][j]);
-					fscanf(fp, "%lf", &value);
-					qValues[i][j] = value;
-					fprintf(logs, "Q value for state %d Action %d : %lf \n", i,j,qValues[i][j]);
-					fflush(logs);
-				}				
+					for(int j = 0 ; j < NUM_OF_ACTIONS; j++)
+					{
+						double value;
+						//fscanf(fp, "%f\n", &qValues[i][j]);
+						fscanf(fp, "%lE", &value);
+						qValues[i][j] = value;
+						fprintf(logs, "Q value for state %d Action %d : %lE \n", i,j,qValues[i][j]);
+						fflush(logs);
+					}
+				}
+				fclose(fp);
+				return;
 			}
 			fclose(fp);
-			return;
 		}
 
 	 int s,a;
@@ -731,7 +754,7 @@ int LearningAI ::  semi_uniform_choose_action  (int & state)
 	  float range_end = 1.0; 
 	  best_val=best_qvalue(state, act);
 	  rand_value = random.randRange(range_start,  range_end);
-	  printf("%d\t%d\t%f\n", state, act, rand_value);
+	  //printf("%d\t%d\t%f\n", state, act, rand_value);
 	  if (rand_value > (1.0 - EXPLORATION_THRESHOLD))
 	  {			
 			switch(state)
@@ -843,7 +866,7 @@ float LearningAI :: getImmediateReward(int state, int action, bool actionSucceed
 #define RESOURCE_WORKER_CONNECT 1
 #define MILITARY_EXTRA 30
 #define MILITARY_REWARD 0.55
-#define MILITARY_PRODUCTION_RATIO 4
+#define MILITARY_PRODUCTION_RATIO 8
 #define ATTACK_FAST_INCENTIVE MILITARY_REWARD*5
 #define ATTACK_INCENTIVE MILITARY_REWARD*10
 #define SCOUT_RATIO 20

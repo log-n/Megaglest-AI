@@ -220,6 +220,7 @@ class LearningAI
 	int qLength;
 	bool isBeingAttackedIntm;
 	int lastAttackFrame;
+	int updateCount;
 
 public:
 	~LearningAI();
