@@ -6,6 +6,7 @@
 #include "unit.h"
 #include "leak_dumper.h"
 #include <cassert>
+#include <time.h>
 
 namespace Glest { namespace Game {
 
@@ -15,6 +16,7 @@ Actions::Actions(AiInterface * aiInterface , int startLoc , FILE * logs)
 	this->aiInterface = aiInterface;
 	this->startLoc = startLoc;
 	clearResourceSpent();
+	random.init(time(NULL));
 }
 
 
@@ -387,31 +389,39 @@ bool Actions::produceOneUnit(UnitClass unitClass)
 	for(int i=0; i<aiInterface->getMyUnitCount(); ++i)
 	{
 		//for each command
-		const UnitType *ut= aiInterface->getMyUnit(i)->getType();
+		const Unit * u = aiInterface->getMyUnit(i);
+		if(u->getCommandSize() > 0){
+			continue;
+		}
+		const UnitType *ut= u->getType();
 		for(int j=0; j<ut->getCommandTypeCount(); ++j)
 		{
 			const CommandType *ct= ut->getCommandType(j);
+			vector<const CommandType *> possibleCmds;
 
 			//if the command is produce
 			if(ct->getClass()==ccProduce || ct->getClass()==ccMorph)
 			{
 				const UnitType *producedUnit= static_cast<const UnitType*>(ct->getProduced());
 				bool produceIt= false;
-
 				//if the unit is from the right class
 				if(producedUnit->isOfClass(unitClass))
 				{
 					if(aiInterface->reqsOk(ct) && aiInterface->reqsOk(producedUnit) && aiInterface->checkCosts(producedUnit))
 					{
-						CommandResult result = aiInterface->giveCommand(i, ct);
-
-						fprintf(logs, "Command sent to AI for produce unit \n");
-
-						if(result == crSuccess){
-							UpdateSpentResource(producedUnit);
-							return true;
-						}
+						possibleCmds.push_back(ct);
 					}
+				}
+			}
+			if(possibleCmds.size() > 0)
+			{
+				int randIndex = random.randRange(0, possibleCmds.size()-1);
+				CommandResult result = aiInterface->giveCommand(i, possibleCmds.at(randIndex));
+				fprintf(logs, "Command sent to AI for produce unit \n");
+
+				if(result == crSuccess){
+					UpdateSpentResource(static_cast<const UnitType*>(ct->getProduced()));
+					return true;
 				}
 			}
 		}

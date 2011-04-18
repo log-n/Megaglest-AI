@@ -98,7 +98,7 @@ void LearningAI::update()
 		return;
 	}
 		Snapshot * newSnapshot;
-		if((aiInterface->getTimer() % (interval * GameConstants::updateFps / 1000)) == 0)
+	//	if((aiInterface->getTimer() % (interval * GameConstants::updateFps / 1000)) == 0)
 		{
 //		printQvalues();
 			aiInterface->printLog(4, " Inside update  :  " + intToStr(aiInterface->getTimer() )+"\n");
@@ -123,7 +123,7 @@ void LearningAI::update()
 			}
 
 			int iteration = 0;
-			while(iteration < 10)
+		//	while(iteration < 10)
 			{
 
 				int newAct;
@@ -158,7 +158,7 @@ void LearningAI::update()
 				fflush(logs);
 
 				if(lastActionSucceed){
-					break;
+			//		break;
 				}
 				iteration++;
 			}
@@ -354,7 +354,7 @@ void  LearningAI:: assignFeatureWeights()
     //readyForAttack
 	featureWeights[featureReadyForAttack]  = 70 ;
 	//damagedUnitCount 
-	featureWeights[featureDamagedUnitCount 	]  = 2 ;
+	featureWeights[featureDamagedUnitCount 	]  = .2 ;
     //noOfWorkers;    
 	featureWeights[featureNoOfWorkers]  = 10 ;
 	//noOfWarriors;
@@ -362,7 +362,7 @@ void  LearningAI:: assignFeatureWeights()
     //noOfBuildings ;     
 	featureWeights[featureNoOfBuildings ]  = 13 ;
 	//upgradeCount;
-	featureWeights[featureUpgradeCount]  = 3 ;
+	featureWeights[featureUpgradeCount]  = .5 ;
 	//resourcesAmounts weights 
 	//resource_name == "gold" 
 	featureWeights[featureRsourcesAmountGold]  = 20 ;
@@ -443,6 +443,7 @@ void LearningAI :: battleEnd()
 				fprintf(fp, "\n");
 			}
 			fprintf(fp, "%lf\t", qValues[i][j]);
+			fflush(fp);
 		}
 	}
 	fclose(fp);
@@ -852,23 +853,32 @@ float LearningAI :: getImmediateReward(int state, int action, bool actionSucceed
 
 void LearningAI::back_update_reward(Snapshot* lastSnapshot, Snapshot* newSnapshot)
 {
-	double produceWorkerReward = 0;
-	for( int i = 0; i < NUM_OF_RESOURCES; i++ )
-	{
-		int resourceDelta = (newSnapshot->resourcesAmount[i] - lastSnapshot->resourcesAmount[i])/10;
-		int resourceSpent = action->resourceSpent[i];
-		int resourceProduced = resourceDelta + resourceSpent;
-		if(resourceProduced < 0){
-			resourceProduced = 0;
+	int count= 0;
+	for(int i=0; i<aiInterface->getMyUnitCount(); ++i){
+		if(aiInterface->getMyUnit(i)->getType()->isOfClass(ucBuilding) && aiInterface->getMyUnit(i)->getType()->getMaxHp() > 6000){
+			++count;
 		}
-		double reward = (((double)resourceSpent - (double)resourceProduced) + resourceExtra[i]) * RESOURCE_REWARD;
-		produceWorkerReward += reward * RESOURCE_WORKER_CONNECT;
-		back_update_qvalues(reward, i);
 	}
-	action->clearResourceSpent();
+	if(count > 0)
+	{
+		double produceWorkerReward = 0;
+		for( int i = 0; i < NUM_OF_RESOURCES; i++ )
+		{
+			int resourceDelta = (newSnapshot->resourcesAmount[i] - lastSnapshot->resourcesAmount[i])/10;
+			int resourceSpent = action->resourceSpent[i];
+			int resourceProduced = resourceDelta + resourceSpent;
+			if(resourceProduced < 0){
+				resourceProduced = 0;
+			}
+			double reward = (((double)resourceSpent - (double)resourceProduced) + resourceExtra[i]) * RESOURCE_REWARD;
+			produceWorkerReward += reward * RESOURCE_WORKER_CONNECT;
+			back_update_qvalues(reward, i);
+		}
+		action->clearResourceSpent();
 
-	//For worker
-	back_update_qvalues(produceWorkerReward, actProduceWorker);
+		//For worker
+		back_update_qvalues(produceWorkerReward, actProduceWorker);
+	}
 
 	double military_reward = (lastSnapshot->noOfWarriors - newSnapshot->noOfWarriors + MILITARY_EXTRA)* MILITARY_REWARD;
 
